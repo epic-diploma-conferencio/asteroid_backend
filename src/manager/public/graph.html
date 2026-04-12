@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analysis Graph</title>
+  <style>
+    :root {
+      --bg: #f5f1e8;
+      --card: rgba(255, 255, 255, 0.92);
+      --text: #1e1d1a;
+      --muted: #615c55;
+      --line: rgba(35, 43, 53, 0.22);
+      --module: #264653;
+      --function: #2a9d8f;
+      --class: #e76f51;
+      --interface: #f4a261;
+      --type: #8ab17d;
+      --variable: #6d597a;
+      --external: #577590;
+      --call: #b56576;
+      --edge: #7f8c8d;
+      --edge-strong: #c66c3b;
+      --edge-symbol: #1d6b57;
+      --edge-cross-call: #b23a48;
+      --panel: rgba(255,255,255,0.95);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(198,108,59,0.17), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(38,70,83,0.18), transparent 22%),
+        var(--bg);
+    }
+
+    .shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.05;
+    }
+
+    .title p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 760px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: #1d6b57;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #264653;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(38, 70, 83, 0.1);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(38, 70, 83, 0.08);
+      backdrop-filter: blur(8px);
+    }
+
+    .meta {
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .stat {
+      padding: 10px 13px;
+      border-radius: 12px;
+      background: rgba(38, 70, 83, 0.06);
+      font-size: 14px;
+    }
+
+    .graph-wrap {
+      position: relative;
+      overflow: hidden;
+      min-height: 840px;
+      padding: 0;
+    }
+
+    svg {
+      width: 100%;
+      height: 840px;
+      display: block;
+      border-radius: 20px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.82), rgba(247,244,237,0.94)),
+        linear-gradient(90deg, rgba(38,70,83,0.04) 1px, transparent 1px),
+        linear-gradient(rgba(38,70,83,0.04) 1px, transparent 1px);
+      background-size: auto, 32px 32px, 32px 32px;
+      cursor: grab;
+    }
+
+    svg.dragging {
+      cursor: grabbing;
+    }
+
+    .hint {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      padding: 9px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.88);
+      color: var(--muted);
+      font-size: 13px;
+      box-shadow: 0 8px 18px rgba(38,70,83,0.08);
+    }
+
+    .side {
+      padding: 18px;
+      align-self: start;
+      position: sticky;
+      top: 18px;
+    }
+
+    .side h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .legend {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+      font-size: 14px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .swatch {
+      width: 13px;
+      height: 13px;
+      border-radius: 999px;
+      display: inline-block;
+      flex: none;
+    }
+
+    .details {
+      border-top: 1px solid rgba(38,70,83,0.1);
+      padding-top: 16px;
+      color: var(--muted);
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 14px;
+    }
+
+    .details strong {
+      color: var(--text);
+    }
+
+    .chip {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(38,70,83,0.08);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .side {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="header">
+      <div class="title">
+        <h1>Project Graph</h1>
+        <p>Drag nodes, zoom with the mouse wheel, drag the canvas to pan, and click any node or edge to inspect the exact relation.</p>
+      </div>
+      <div class="toolbar">
+        <button id="refresh">Refresh</button>
+        <button id="fit" class="secondary">Fit View</button>
+        <button id="reset" class="secondary">Reset Layout</button>
+      </div>
+    </div>
+
+    <div class="card meta">
+      <div id="summary">Loading graph...</div>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="layout">
+      <div class="card graph-wrap">
+        <svg id="graph" viewBox="0 0 1600 900" aria-label="analysis graph"></svg>
+        <div class="hint">Wheel: zoom. Drag background: pan. Drag node: move.</div>
+      </div>
+
+      <aside class="card side">
+        <h2>Legend</h2>
+        <div class="legend">
+          <div class="legend-item"><span class="swatch" style="background:#264653"></span>Module</div>
+          <div class="legend-item"><span class="swatch" style="background:#2a9d8f"></span>Function</div>
+          <div class="legend-item"><span class="swatch" style="background:#e76f51"></span>Class</div>
+          <div class="legend-item"><span class="swatch" style="background:#f4a261"></span>Interface</div>
+          <div class="legend-item"><span class="swatch" style="background:#8ab17d"></span>Type</div>
+          <div class="legend-item"><span class="swatch" style="background:#6d597a"></span>Variable</div>
+          <div class="legend-item"><span class="swatch" style="background:#577590"></span>External import</div>
+          <div class="legend-item"><span class="swatch" style="background:#b56576"></span>Call target</div>
+          <div class="legend-item"><span class="swatch" style="background:#1d6b57"></span>Imported symbol</div>
+          <div class="legend-item"><span class="swatch" style="background:#b23a48"></span>Cross-module call</div>
+        </div>
+        <div class="details" id="details">
+Select a node or edge to inspect it.
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const svg = document.getElementById('graph');
+    const summary = document.getElementById('summary');
+    const stats = document.getElementById('stats');
+    const details = document.getElementById('details');
+    const refreshButton = document.getElementById('refresh');
+    const fitButton = document.getElementById('fit');
+    const resetButton = document.getElementById('reset');
+
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    const palette = {
+      module: '#264653',
+      function: '#2a9d8f',
+      class: '#e76f51',
+      interface: '#f4a261',
+      type: '#8ab17d',
+      enum: '#bc6c25',
+      variable: '#6d597a',
+      external: '#577590',
+      call: '#b56576',
+      edge: '#8d99ae',
+      edgeStrong: '#c66c3b',
+      edgeSymbol: '#1d6b57',
+      edgeCrossCall: '#b23a48',
+      default: '#6c757d'
+    };
+
+    let currentGraph = null;
+    let positions = new Map();
+    let viewport = { x: 0, y: 0, scale: 1 };
+    let interaction = null;
+
+    function colorFor(kind) {
+      return palette[kind] || palette.default;
+    }
+
+    function createSvgElement(tag, attrs = {}) {
+      const el = document.createElementNS(SVG_NS, tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        el.setAttribute(key, value);
+      }
+      return el;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function screenToWorld(clientX, clientY) {
+      const rect = svg.getBoundingClientRect();
+      const x = ((clientX - rect.left) / rect.width) * 1600;
+      const y = ((clientY - rect.top) / rect.height) * 900;
+      return {
+        x: (x - viewport.x) / viewport.scale,
+        y: (y - viewport.y) / viewport.scale
+      };
+    }
+
+    function updateDetails(title, payload) {
+      const pretty = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+      details.innerHTML = `<strong>${title}</strong>\n${pretty}`;
+    }
+
+    function moduleIdForNode(node) {
+      return node?.moduleId || (node?.kind === 'module' ? node.id : null);
+    }
+
+    function buildSyntheticNode(id, sourceNode, edge) {
+      if (id.startsWith('external:')) {
+        return {
+          id,
+          kind: 'external',
+          name: edge.data?.specifier || id.replace(/^external:/, ''),
+          parentId: null,
+          moduleId: moduleIdForNode(sourceNode),
+          data: {
+            synthetic: true,
+            sourceModule: sourceNode?.name || null,
+            specifier: edge.data?.specifier || null
+          }
+        };
+      }
+
+      if (id.startsWith('call:')) {
+        return {
+          id,
+          kind: 'call',
+          name: (edge.data?.callee || id.replace(/^call:/, '')) + '()',
+          parentId: moduleIdForNode(sourceNode),
+          moduleId: moduleIdForNode(sourceNode),
+          data: {
+            synthetic: true,
+            sourceModule: sourceNode?.name || null,
+            callee: edge.data?.callee || null
+          }
+        };
+      }
+
+      return {
+        id,
+        kind: 'external',
+        name: id,
+        parentId: null,
+        moduleId: moduleIdForNode(sourceNode),
+        data: { synthetic: true }
+      };
+    }
+
+    function prepareGraph(rawGraph) {
+      const nodes = [...rawGraph.nodes];
+      const known = new Map(nodes.map(node => [node.id, node]));
+
+      for (const edge of rawGraph.edges) {
+        if (!known.has(edge.from)) {
+          known.set(edge.from, buildSyntheticNode(edge.from, null, edge));
+          nodes.push(known.get(edge.from));
+        }
+
+        if (!known.has(edge.to)) {
+          const sourceNode = known.get(edge.from);
+          const synthetic = buildSyntheticNode(edge.to, sourceNode, edge);
+          known.set(edge.to, synthetic);
+          nodes.push(synthetic);
+        }
+      }
+
+      return {
+        ...rawGraph,
+        nodes
+      };
+    }
+
+    function resetLayout() {
+      if (!currentGraph) return;
+      positions = computeInitialPositions(currentGraph.nodes);
+      viewport = { x: 0, y: 0, scale: 1 };
+      renderGraph();
+    }
+
+    function fitView() {
+      if (!currentGraph || currentGraph.nodes.length === 0) return;
+
+      const coords = Array.from(positions.values());
+      const minX = Math.min(...coords.map(point => point.x));
+      const maxX = Math.max(...coords.map(point => point.x));
+      const minY = Math.min(...coords.map(point => point.y));
+      const maxY = Math.max(...coords.map(point => point.y));
+      const width = Math.max(1, maxX - minX + 180);
+      const height = Math.max(1, maxY - minY + 180);
+
+      const scale = Math.min(1600 / width, 900 / height, 1.3);
+      viewport.scale = scale;
+      viewport.x = 800 - ((minX + maxX) / 2) * scale;
+      viewport.y = 450 - ((minY + maxY) / 2) * scale;
+      renderGraph();
+    }
+
+    function computeInitialPositions(nodes) {
+      const result = new Map();
+      const modules = nodes.filter(node => node.kind === 'module');
+      const nonModules = nodes.filter(node => node.kind !== 'module');
+
+      const languageOrder = ['javascript', 'typescript', 'python'];
+      const modulesByLanguage = new Map();
+      modules.forEach(node => {
+        const language = node.data?.language || node.data?.parser || node.data?.path?.split('.').pop() || 'other';
+        if (!modulesByLanguage.has(language)) modulesByLanguage.set(language, []);
+        modulesByLanguage.get(language).push(node);
+      });
+
+      let rowIndex = 0;
+      for (const language of [...languageOrder, ...Array.from(modulesByLanguage.keys()).filter(language => !languageOrder.includes(language))]) {
+        const bucket = modulesByLanguage.get(language);
+        if (!bucket || bucket.length === 0) continue;
+
+        bucket.forEach((node, index) => {
+          const col = index % 3;
+          const row = Math.floor(index / 3);
+          result.set(node.id, {
+            x: 220 + col * 420,
+            y: 170 + (rowIndex * 320) + row * 220
+          });
+        });
+
+        rowIndex += Math.max(1, Math.ceil(bucket.length / 3));
+      }
+
+      const grouped = new Map();
+      nonModules.forEach(node => {
+        const key = node.parentId || node.moduleId || 'orphans';
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(node);
+      });
+
+      for (const [parentId, children] of grouped.entries()) {
+        const base = result.get(parentId) || { x: 1220, y: 160 };
+        children.forEach((child, index) => {
+          const columns = child.kind === 'call' ? 2 : 3;
+          const row = Math.floor(index / columns);
+          const col = index % columns;
+          const yOffset = child.kind === 'call' ? 170 : 120;
+          const xStep = child.kind === 'external' ? 140 : 110;
+          result.set(child.id, {
+            x: base.x - ((columns - 1) * xStep) / 2 + col * xStep,
+            y: base.y + yOffset + row * 92
+          });
+        });
+      }
+
+      return result;
+    }
+
+    function buildMarkers(defs) {
+      const arrow = createSvgElement('marker', {
+        id: 'arrow',
+        markerWidth: '8',
+        markerHeight: '8',
+        refX: '7',
+        refY: '4',
+        orient: 'auto',
+        markerUnits: 'strokeWidth'
+      });
+      arrow.appendChild(createSvgElement('path', {
+        d: 'M0,0 L8,4 L0,8 z',
+        fill: palette.edge
+      }));
+
+      const arrowStrong = createSvgElement('marker', {
+        id: 'arrow-strong',
+        markerWidth: '8',
+        markerHeight: '8',
+        refX: '7',
+        refY: '4',
+        orient: 'auto',
+        markerUnits: 'strokeWidth'
+      });
+      arrowStrong.appendChild(createSvgElement('path', {
+        d: 'M0,0 L8,4 L0,8 z',
+        fill: palette.edgeStrong
+      }));
+
+      defs.appendChild(arrow);
+      defs.appendChild(arrowStrong);
+    }
+
+    function edgeStyle(edge) {
+      if (edge.kind === 'module-import') {
+        return { color: palette.edgeStrong, strokeWidth: 3.5, opacity: 0.92, marker: 'arrow-strong' };
+      }
+
+      if (edge.kind === 'symbol-import') {
+        return { color: palette.edgeSymbol, strokeWidth: 3, opacity: 0.95, marker: 'arrow' };
+      }
+
+      if (edge.kind === 'cross-module-call') {
+        return { color: palette.edgeCrossCall, strokeWidth: 3.2, opacity: 0.98, marker: 'arrow-strong' };
+      }
+
+      if (edge.kind === 'calls') {
+        return { color: palette.edge, strokeWidth: 2.5, opacity: 0.92, marker: 'arrow' };
+      }
+
+      if (edge.kind === 'contains') {
+        return { color: palette.edge, strokeWidth: 1.8, opacity: 0.35, marker: null };
+      }
+
+      return { color: palette.edge, strokeWidth: 1.8, opacity: 0.92, marker: 'arrow' };
+    }
+
+    function renderGraph() {
+      if (!currentGraph) return;
+
+      svg.innerHTML = '';
+      const defs = createSvgElement('defs');
+      buildMarkers(defs);
+      svg.appendChild(defs);
+
+      const root = createSvgElement('g', {
+        transform: `translate(${viewport.x} ${viewport.y}) scale(${viewport.scale})`
+      });
+      const panSurface = createSvgElement('rect', {
+        x: -4000,
+        y: -4000,
+        width: 8000,
+        height: 8000,
+        fill: 'transparent'
+      });
+      const edgeLayer = createSvgElement('g');
+      const nodeLayer = createSvgElement('g');
+      root.appendChild(panSurface);
+      root.appendChild(edgeLayer);
+      root.appendChild(nodeLayer);
+      svg.appendChild(root);
+
+      panSurface.addEventListener('pointerdown', event => {
+        interaction = {
+          type: 'pan',
+          startX: event.clientX,
+          startY: event.clientY,
+          originX: viewport.x,
+          originY: viewport.y
+        };
+        svg.classList.add('dragging');
+      });
+
+      for (const edge of currentGraph.edges) {
+        const from = positions.get(edge.from);
+        const to = positions.get(edge.to);
+        if (!from || !to) continue;
+
+        const style = edgeStyle(edge);
+        const color = style.color;
+        const strokeWidth = style.strokeWidth;
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const distance = Math.max(1, Math.hypot(dx, dy));
+        const curve = Math.min(90, Math.max(24, distance * 0.18));
+        const midX = (from.x + to.x) / 2;
+        const midY = (from.y + to.y) / 2;
+        const normalX = (-dy / distance) * curve;
+        const normalY = (dx / distance) * curve;
+        const controlX = midX + normalX;
+        const controlY = midY + normalY;
+
+        const path = createSvgElement('path', {
+          d: `M ${from.x} ${from.y} Q ${controlX} ${controlY} ${to.x} ${to.y}`,
+          stroke: color,
+          'stroke-width': strokeWidth,
+          'stroke-linecap': 'round',
+          fill: 'none',
+          opacity: style.opacity,
+          'marker-end': style.marker ? `url(#${style.marker})` : ''
+        });
+
+        path.style.cursor = 'pointer';
+        path.addEventListener('click', event => {
+          event.stopPropagation();
+          updateDetails(`Edge: ${edge.kind}`, edge);
+        });
+
+        edgeLayer.appendChild(path);
+
+        if (edge.kind !== 'contains') {
+          const label = edge.kind === 'module-import'
+            ? edge.data?.specifier || 'module-import'
+            : edge.kind;
+
+          const labelBg = createSvgElement('rect', {
+            x: controlX - 48,
+            y: controlY - 16,
+            width: 96,
+            height: 20,
+            rx: 10,
+            fill: 'rgba(255,255,255,0.84)',
+            stroke: 'rgba(38,70,83,0.08)'
+          });
+
+          const text = createSvgElement('text', {
+            x: controlX,
+            y: controlY - 2,
+            'text-anchor': 'middle',
+            'font-size': '11',
+            fill: color,
+            opacity: 0.9
+          });
+          text.textContent = label;
+          text.style.pointerEvents = 'none';
+          labelBg.style.pointerEvents = 'none';
+          edgeLayer.appendChild(labelBg);
+          edgeLayer.appendChild(text);
+        }
+      }
+
+      for (const node of currentGraph.nodes) {
+        const point = positions.get(node.id);
+        if (!point) continue;
+
+        const group = createSvgElement('g');
+        group.style.cursor = 'grab';
+
+        const radius = node.kind === 'module' ? 30 : node.kind === 'class' ? 24 : 18;
+        const circle = createSvgElement('circle', {
+          cx: point.x,
+          cy: point.y,
+          r: radius,
+          fill: colorFor(node.kind),
+          opacity: 0.96
+        });
+
+        const stroke = createSvgElement('circle', {
+          cx: point.x,
+          cy: point.y,
+          r: radius + 3,
+          fill: 'none',
+          stroke: 'rgba(0,0,0,0.08)',
+          'stroke-width': '2'
+        });
+
+        const labelBg = createSvgElement('rect', {
+          x: point.x - Math.max(42, node.name.length * 3.8),
+          y: point.y + radius + 6,
+          width: Math.max(84, node.name.length * 7.6),
+          height: 22,
+          rx: 11,
+          fill: 'rgba(255,255,255,0.88)'
+        });
+
+        const label = createSvgElement('text', {
+          x: point.x,
+          y: point.y + radius + 21,
+          'text-anchor': 'middle',
+          'font-size': node.kind === 'module' ? '15' : '13',
+          fill: '#1e1d1a'
+        });
+        label.textContent = node.name;
+        label.style.pointerEvents = 'none';
+
+        group.appendChild(stroke);
+        group.appendChild(circle);
+        group.appendChild(labelBg);
+        group.appendChild(label);
+
+        group.addEventListener('pointerdown', event => {
+          event.stopPropagation();
+          const world = screenToWorld(event.clientX, event.clientY);
+          interaction = {
+            type: 'node',
+            nodeId: node.id,
+            offsetX: point.x - world.x,
+            offsetY: point.y - world.y
+          };
+          group.setPointerCapture(event.pointerId);
+          updateDetails(`Node: ${node.name}`, node);
+        });
+
+        group.addEventListener('click', event => {
+          event.stopPropagation();
+          updateDetails(`Node: ${node.name}`, node);
+        });
+
+        nodeLayer.appendChild(group);
+      }
+    }
+
+    function populateStats(graphData) {
+      stats.innerHTML = '';
+      summary.innerHTML = `Loaded <strong>${graphData.modules.length}</strong> files, <strong>${graphData.nodes.length}</strong> nodes and <strong>${graphData.edges.length}</strong> edges.`;
+
+      const metrics = [
+        ['Files', graphData.modules.length],
+        ['Nodes', graphData.nodes.length],
+        ['Edges', graphData.edges.length],
+        ['Module Links', graphData.edges.filter(edge => edge.kind === 'module-import').length],
+        ['Imported Symbols', graphData.edges.filter(edge => edge.kind === 'symbol-import').length],
+        ['Cross Calls', graphData.edges.filter(edge => edge.kind === 'cross-module-call').length],
+        ['Calls', graphData.edges.filter(edge => edge.kind === 'calls').length],
+        ['External refs', graphData.nodes.filter(node => node.kind === 'external' || node.kind === 'call').length]
+      ];
+
+      for (const [label, value] of metrics) {
+        const item = document.createElement('div');
+        item.className = 'stat';
+        item.textContent = `${label}: ${value}`;
+        stats.appendChild(item);
+      }
+    }
+
+    async function loadGraph() {
+      const response = await fetch('/api/graph');
+      const rawGraph = await response.json();
+      const graphData = prepareGraph(rawGraph);
+      currentGraph = graphData;
+      positions = computeInitialPositions(graphData.nodes);
+      viewport = { x: 0, y: 0, scale: 1 };
+      populateStats(graphData);
+      fitView();
+      updateDetails('Canvas', 'Drag the graph to inspect relations between files and entities.');
+    }
+
+    window.addEventListener('pointermove', event => {
+      if (!interaction) return;
+
+      if (interaction.type === 'pan') {
+        viewport.x = interaction.originX + ((event.clientX - interaction.startX) / svg.clientWidth) * 1600;
+        viewport.y = interaction.originY + ((event.clientY - interaction.startY) / svg.clientHeight) * 900;
+        renderGraph();
+        return;
+      }
+
+      if (interaction.type === 'node') {
+        const world = screenToWorld(event.clientX, event.clientY);
+        positions.set(interaction.nodeId, {
+          x: world.x + interaction.offsetX,
+          y: world.y + interaction.offsetY
+        });
+        renderGraph();
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      interaction = null;
+      svg.classList.remove('dragging');
+    });
+
+    svg.addEventListener('wheel', event => {
+      event.preventDefault();
+      const factor = event.deltaY < 0 ? 1.08 : 0.92;
+      const nextScale = clamp(viewport.scale * factor, 0.35, 2.4);
+      const worldBefore = screenToWorld(event.clientX, event.clientY);
+      viewport.scale = nextScale;
+      const rect = svg.getBoundingClientRect();
+      const screenX = ((event.clientX - rect.left) / rect.width) * 1600;
+      const screenY = ((event.clientY - rect.top) / rect.height) * 900;
+      viewport.x = screenX - worldBefore.x * viewport.scale;
+      viewport.y = screenY - worldBefore.y * viewport.scale;
+      renderGraph();
+    }, { passive: false });
+
+    refreshButton.addEventListener('click', () => {
+      loadGraph().catch(error => {
+        updateDetails('Error', error.message);
+      });
+    });
+
+    fitButton.addEventListener('click', fitView);
+    resetButton.addEventListener('click', resetLayout);
+
+    loadGraph().catch(error => {
+      summary.innerHTML = `<strong>Failed to load graph:</strong> ${error.message}`;
+      updateDetails('Error', error.message);
+    });
+  </script>
+</body>
+</html>

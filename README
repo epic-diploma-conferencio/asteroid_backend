@@ -1,0 +1,3331 @@
+
+
+
+
+Инструмент анализа архитектурных ошибок в программном коде
+
+Общая цель — автоматическое выявление архитектурной деградации ПО.
+
+Общая идея проекта
+Система анализирует исходный код реального проекта и определяет архитектурные ошибки, которые невозможно надёжно выявить обычными линтерами:
+нарушение слоёв (UI → DB напрямую)
+циклические зависимости
+скрытая монолитизация
+рост технического долга
+расхождение с заявленной архитектурой
+На выходе — формализованный архитектурный диагноз, а не список warning’ов.
+
+Архитектура проекта (в целом)
+Исходный код
+   ↓
+Анализ кода (AST, зависимости)  ←—— ЧАСТЬ A
+   ↓
+Архитектурная модель
+   ↓
+Проверка архитектурных правил  ←—— ЧАСТЬ B
+   ↓
+Отчёт + визуализация
+
+ЧАСТЬ A — Анализатор кода и зависимостей
+
+Функциональность
+парсинг исходного кода (Java / Kotlin / TypeScript / Python)
+построение AST
+извлечение:
+вызовов
+импортов
+зависимостей между модулями
+построение графа зависимостей
+
+Результат
+Структурированная модель:
+модули
+пакеты
+связи
+уровни вложенности
+
+Инженерная сложность
+работа с AST
+графовые структуры
+масштабируемость на больших кодовых базах
+независимость от конкретного фреймворка
+
+Типовой стек
+парсеры (ANTLR / Tree-sitter)
+графы (Neo4j / in-memory)
+backend-сервис
+
+ЧАСТЬ B — Архитектурный анализ и диагностика
+Независимая логическая система.
+Функциональность
+задание архитектурных правил:
+слои
+allowed / forbidden dependencies
+границы контекстов
+проверка кода на соответствие правилам
+вычисление метрик деградации:
+coupling
+instability
+fan-in / fan-out
+анализ динамики по версиям
+
+Результат
+список архитектурных нарушений
+оценка риска проекта
+рекомендации по исправлению
+визуальные схемы
+
+Инженерная сложность
+формализация архитектуры
+алгоритмы анализа графов
+интерпретация метрик
+доказательная часть («почему это ошибка»)
+
+Общий пользовательский сценарий
+Загружается репозиторий
+Система строит модель проекта
+Пользователь задаёт архитектурные ограничения
+Система:
+находит нарушения
+показывает граф
+формирует отчёт
+Сравнение двух версий проекта → рост/снижение деградации
+
+Преимущества темы
+не CRUD
+не «приложение»
+программная инженерия
+формальные модели + алгоритмы
+чёткое деление 50/50
+легко показать научную новизну
+применимо к реальным проектам
+
+Защита:
+демонстрация реального репозитория
+найденные архитектурные ошибки
+визуализация графа
+количественные метрики деградации
+выводы о качестве архитектуры
+
+Формулировка темы диплома
+«Разработка программного инструмента автоматического анализа архитектурных нарушений в исходном коде программных систем»
+Вот тема диплома как мне рассказать о ней руководителю чтобы он ее подтвердилч давай с преимуществами и почему это круто ещё раз и где это использовать а ещё желательно с новизной
+
+Как представить тему руководителю
+
+Краткая формулировка
+Тема — разработка инструмента автоматического анализа архитектурных нарушений в исходном коде программных систем. Фокус не на линтинге, а на выявлении архитектурной деградации на уровне системы: слои, зависимости, эволюция структуры, соответствие заявленной архитектуре.
+
+Суть проекта
+Инструмент строит формальную архитектурную модель проекта на основе анализа исходного кода и графа зависимостей, затем проверяет её на соответствие архитектурным правилам и вычисляет метрики деградации. Результат — архитектурный диагноз с обоснованием, а не набор локальных warning’ов.
+
+Почему это сильная дипломная работа
+
+Не прикладное CRUD-приложение, а инструмент программной инженерии.
+
+Работа с AST, графами, формальными моделями и алгоритмами анализа.
+
+Чёткое разделение на две независимые подсистемы: извлечение модели и архитектурная диагностика.
+
+Возможность демонстрации на реальных промышленных репозиториях.
+
+Количественные метрики и воспроизводимые результаты.
+
+Хорошо масштабируется по сложности: от базовых правил до анализа эволюции архитектуры.
+
+Чем отличается от существующих решений
+
+Линтеры и static analysis находят локальные ошибки, но не архитектурные нарушения.
+
+ArchUnit и аналоги требуют жёстко прописанных правил и не анализируют деградацию во времени.
+
+Предлагаемый инструмент:
+
+выявляет скрытые проблемы (монолитизация, рост связности),
+
+работает с фактической архитектурой, а не только с декларативной,
+
+анализирует динамику по версиям проекта.
+
+Научная новизна
+
+Формализация архитектурных нарушений как свойств графа зависимостей.
+
+Архитектурный «диагноз», а не бинарное соответствие/несоответствие.
+
+Метрики деградации архитектуры и их интерпретация в терминах риска.
+
+Анализ расхождения между заявленной и фактической архитектурой.
+
+Сравнение архитектурных состояний проекта во времени.
+
+Где это использовать
+
+Code review на уровне архитектуры.
+
+Технический аудит проектов перед развитием или рефакторингом.
+
+Контроль качества архитектуры в больших командах.
+
+Образовательные цели: анализ реальных ошибок архитектуры.
+
+DevOps / CI как этап контроля архитектурной деградации.
+
+Что показывается на защите
+
+Анализ реального репозитория.
+
+Граф зависимостей модулей.
+
+Найденные архитектурные нарушения с объяснением причин.
+
+Метрики связности, нестабильности, fan-in / fan-out.
+
+Сравнение двух версий проекта и вывод о деградации или улучшении архитектуры.
+
+Почему руководителю выгодно утвердить тему
+
+Чёткая инженерная и научная составляющая.
+
+Минимум «воды», максимум алгоритмов и формальных моделей.
+
+Легко обосновать актуальность и новизну.
+
+Результат — полноценный инструмент, а не учебный прототип.
+
+Финальная формулировка темы
+«Разработка программного инструмента автоматического анализа архитектурных нарушений в исходном коде программных систем»
+
+
+Какие архитектурные ошибки можно выявлять на графе 
+
+Архитектурные ошибки, выявляемые на графе зависимостей
+
+1. Нарушение слоёв архитектуры
+Формализация: ориентированный граф, уровни заданы как частичный порядок.
+
+Выявляется:
+
+зависимости снизу вверх
+UI → DB, Controller → Persistence
+
+обход слоя
+UI → Repository минуя Service
+
+обратные зависимости
+низкоуровневые модули знают о высокоуровневых
+
+Графовый признак:
+
+ребро, нарушающее порядок слоёв
+
+наличие пути, запрещённого правилами
+
+2. Циклические зависимости
+Формализация: циклы в ориентированном графе.
+
+Выявляется:
+
+прямые циклы между модулями
+
+косвенные циклы длины > 2
+
+циклы на уровне пакетов, модулей, bounded context
+
+Графовый признак:
+
+strongly connected components размером > 1
+
+рост SCC между версиями
+
+3. Скрытая монолитизация
+Формализация: уплотнение графа.
+
+Выявляется:
+
+рост плотности рёбер
+
+увеличение среднего пути связности
+
+исчезновение слабо связанных компонент
+
+Графовый признак:
+
+снижение модульности (community detection)
+
+рост межмодульных рёбер
+
+падение modularity score
+
+4. Размывание границ контекстов
+Формализация: кластеры графа.
+
+Выявляется:
+
+интенсивные связи между bounded context
+
+взаимные зависимости контекстов
+
+Графовый признак:
+
+высокий cut size между кластерами
+
+отсутствие чётких границ сообществ
+
+5. Архитектурные «затычки» (God Object / God Module)
+Формализация: центральные вершины графа.
+
+Выявляется:
+
+модули, через которые проходит большая часть путей
+
+классы с экстремальным fan-in / fan-out
+
+Графовый признак:
+
+высокая betweenness centrality
+
+аномальный degree
+
+6. Избыточная связность (High Coupling)
+Формализация: локальная плотность.
+
+Выявляется:
+
+слишком много зависимостей у модуля
+
+сильная связанность с конкретным соседом
+
+Графовый признак:
+
+высокий degree
+
+высокий edge weight между парами вершин
+
+7. Архитектурная нестабильность
+Формализация: баланс входящих и исходящих рёбер.
+
+Выявляется:
+
+модули, которые много используют другие, но сами зависят от нестабильных частей
+
+нарушение принципа стабильных зависимостей (SDP)
+
+Графовый признак:
+
+instability = fan-out / (fan-in + fan-out)
+
+зависимости от вершин с высокой instability
+
+8. Инверсия зависимостей на уровне архитектуры
+Формализация: направление рёбер между абстракциями и реализациями.
+
+Выявляется:
+
+бизнес-логика зависит от конкретных реализаций
+
+интерфейсы зависят от классов
+
+Графовый признак:
+
+направление рёбер нарушает правило «абстракции ← реализации»
+
+9. Dead / Orphan модули
+Формализация: изолированные вершины.
+
+Выявляется:
+
+код, на который никто не ссылается
+
+модули, не используемые в архитектуре
+
+Графовый признак:
+
+вершины с fan-in = 0
+
+компоненты, не связанные с основной компонентой графа
+
+10. Архитектурная деградация во времени
+Формализация: последовательность графов.
+
+Выявляется:
+
+рост циклов
+
+рост плотности
+
+рост centrality отдельных вершин
+
+Графовый признак:
+
+∆метрик между версиями
+
+появление новых SCC
+
+увеличение centralization
+
+11. Нарушение заявленной архитектуры
+Формализация: сравнение эталонного и фактического графов.
+
+Выявляется:
+
+отсутствующие или лишние зависимости
+
+появление неразрешённых путей
+
+Графовый признак:
+
+diff графов
+
+несовпадение adjacency matrix с эталоном
+
+12. Антипаттерны распределения ответственности
+Формализация: структура потоков зависимостей.
+
+Выявляется:
+
+«архитектурные свалки»
+
+модули-посредники без собственной логики
+
+Графовый признак:
+
+высокая betweenness при низкой внутренней сложности
+
+аномальные path distributions
+
+Сильная мысль для руководителя
+Граф зависимостей — это фактическая архитектура системы.
+Архитектурные ошибки — это не стиль кода, а топологические дефекты этого графа.
+
+
+Какие алгоритмы позволяют это осознать 
+
+Алгоритмы, позволяющие выявлять архитектурные ошибки на графе
+
+1. Обходы графа (DFS / BFS)
+Базис.
+
+Используются для:
+
+поиска запрещённых путей между слоями
+
+выявления обхода архитектурных границ
+
+достижимости модулей
+
+Формально:
+
+проверка существования пути A → B, где путь запрещён архитектурным правилом
+
+2. Поиск сильно связных компонент (Tarjan / Kosaraju)
+Ключевой алгоритм.
+
+Используются для:
+
+выявления циклических зависимостей
+
+обнаружения архитектурных «узлов слипшихся модулей»
+
+оценки деградации по росту SCC
+
+Формально:
+
+SCC размером > 1 = архитектурный цикл
+
+3. Топологическая сортировка
+Проверка ацикличности.
+
+Используются для:
+
+проверки корректности слоистой архитектуры
+
+доказательства невозможности корректной декомпозиции
+
+Формально:
+
+невозможность топологической сортировки ⇒ архитектурная ошибка
+
+4. Анализ степеней вершин (Degree Analysis)
+Простейшая метрика, но фундаментальная.
+
+Используются для:
+
+fan-in / fan-out
+
+выявления перегруженных модулей
+
+поиска God Object / God Module
+
+Формально:
+
+аномальные значения in-degree / out-degree
+
+5. Центральности графа
+Критично для выявления скрытых проблем.
+
+Betweenness Centrality
+
+поиск архитектурных «бутылочных горлышек»
+
+модули, через которые проходит большая часть путей
+
+PageRank / Eigenvector Centrality
+
+реальная архитектурная значимость модуля
+
+скрытые центры влияния
+
+6. Метрики связности и плотности
+Используются для диагностики монолитизации.
+
+Алгоритмы:
+
+вычисление плотности графа
+
+average shortest path
+
+clustering coefficient
+
+Признак:
+
+рост плотности ⇒ архитектурное схлопывание
+
+7. Community Detection (кластеризация графа)
+Ключ к анализу bounded context.
+
+Алгоритмы:
+
+Louvain
+
+Leiden
+
+Girvan–Newman
+
+Используются для:
+
+выявления фактических архитектурных модулей
+
+сравнения с заявленной архитектурой
+
+поиска размытых границ
+
+8. Cut / Separator анализ
+Формализация границ контекстов.
+
+Алгоритмы:
+
+minimum cut
+
+edge cut
+
+conductance
+
+Используются для:
+
+оценки качества разделения модулей
+
+поиска «протечек» между контекстами
+
+9. Анализ устойчивости (Instability Metrics)
+Основан на подсчёте рёбер.
+
+Формула:
+
+I = fan-out / (fan-in + fan-out)
+
+Используются для:
+
+проверки принципа стабильных зависимостей
+
+выявления неправильных направлений связей
+
+10. Pattern Matching на графе
+Формализация антипаттернов.
+
+Алгоритмы:
+
+поиск подграфов (subgraph isomorphism)
+
+rule-based graph queries (Cypher / Gremlin)
+
+Используются для:
+
+выявления известных архитектурных антипаттернов
+
+доказательной диагностики
+
+11. Сравнение графов (Graph Diff)
+Основа анализа деградации во времени.
+
+Алгоритмы:
+
+diff adjacency matrix
+
+edit distance графов
+
+сравнение метрик между версиями
+
+Используются для:
+
+оценки роста архитектурного долга
+
+обнаружения деградации без «явных ошибок»
+
+12. Временной анализ (Temporal Graph Analysis)
+Граф как функция времени.
+
+Алгоритмы:
+
+анализ трендов метрик
+
+sliding window по версиям
+
+change point detection
+
+Используются для:
+
+выявления момента архитектурного излома
+
+доказательства деградации
+
+13. Формальные правила и логика
+Архитектура как система ограничений.
+
+Подходы:
+
+правила над графом
+
+логика предикатов
+
+constraint solving
+
+Используются для:
+
+строгого доказательства нарушения
+
+объяснимости результатов
+
+Ключевая мысль
+Архитектурные ошибки — это не эвристики.
+Это вычислимые свойства ориентированного графа зависимостей, выявляемые классическими алгоритмами теории графов и их динамикой во времени.
+
+
+
+
+
+
+
+Если кидать в Minio один и тот же файл он же не запишется разным?
+
+MinIO не дедуплицирует данные автоматически.
+
+Если загружать «один и тот же файл»:
+
+С тем же bucket + тем же object key (именем) → файл будет перезаписан. Физически останется одна версия (если versioning выключен).
+
+С тем же содержимым, но другим именем (key) → будет записан второй объект, полностью дублирующий данные.
+
+С включённым versioning и тем же key → создастся новая версия объекта, данные хранятся отдельно.
+
+MinIO — S3-совместимое объектное хранилище. Оно работает по принципу key → blob, а не по хэшу содержимого.
+Контроль уникальности — ответственность клиента.
+
+Если нужна дедупликация:
+
+считать хэш (SHA-256) на стороне клиента;
+
+использовать хэш как object key;
+
+либо вести отдельный индекс hash → key.
+
+Иначе MinIO будет хранить дубликаты без возражений.
+
+
+Допустим я кинул два файла, потом я кинул ещё два файла но в одном добавил лишнюю точку, если я буду хранить с ключём как хеш файла то у меня же не будет дублироваться тот файл который без изменений 
+
+Да. При хранении с ключом = хэш содержимого дублирования не будет.
+
+Логика жёсткая и однозначная:
+
+Файл A → считаешь хэш → H(A) → кладёшь в MinIO под ключом H(A)
+
+Файл A (без изменений) повторно → хэш тот же H(A) → запись идёт в тот же объект, новый не создаётся
+
+Файл B, где добавлена одна точка → содержимое изменилось → другой хэш H(B) → новый объект
+
+Итог:
+
+неизменённый файл хранится один раз
+
+файл с лишней точкой — отдельный объект
+
+MinIO ничего не дублирует, потому что ключ совпадает
+
+Важно понимать детали:
+
+Хэш считается от байтов, не от имени файла
+Переименование без изменения содержимого → хэш тот же.
+
+Перезапись
+Если версия bucket выключена — повторная загрузка под тем же ключом просто перезапишет объект (физически это тот же файл).
+Если версия включена — появится новая версия, дедупликация по факту ломается.
+
+Метаданные ≠ содержимое
+Разные Content-Type, x-amz-meta-* и т.п. не влияют на хэш, если ты считаешь его только по телу файла.
+
+Коллизии
+Для SHA-256 на практике можно игнорировать.
+MD5 — можно, но для продакшена лучше SHA-256.
+
+Минимальная рабочая схема:
+
+key = sha256(file_bytes)
+
+отдельная таблица/БД: logical_name → hash
+
+MinIO используется как blob-store, не как файловая система
+
+В таком режиме MinIO становится фактически content-addressable storage.
+
+
+
+Есть еще вот такое но тут надо поправить под выше поисанное 
+
+
+
+Насколько хорошо бэк на node js работает с асинхроном?
+
+Бэк на Node.js изначально построен вокруг асинхронной модели, это его базовое свойство, а не дополнительная возможность.
+
+Основа — событийный цикл (event loop) и неблокирующий ввод-вывод. Любая операция, связанная с сетью, файловой системой или БД, не останавливает поток выполнения. Вместо этого задача передаётся в систему, а выполнение продолжается дальше. Когда результат готов — вызывается колбэк или резолвится промис.
+
+Ключевые механизмы:
+
+Callback — базовый механизм, низкоуровневый контроль
+
+Promise — структурированная работа с асинхронностью
+
+async/await — синтаксический слой над Promise, делает код линейным по виду
+
+Пример модели исполнения:
+
+Запрос пришёл в сервер
+
+Запущен обработчик
+
+Выполнен асинхронный вызов (например, запрос к БД)
+
+Поток не блокируется, обрабатываются другие запросы
+
+Когда данные готовы — выполнение продолжается
+
+Следствия:
+
+Плюсы:
+
+Высокая производительность на I/O-bound задачах (API, прокси, микросервисы)
+
+Способность обрабатывать тысячи соединений в одном процессе
+
+Минимальные накладные расходы на переключение контекста
+
+Минусы:
+
+CPU-bound задачи блокируют event loop
+
+Ошибки в асинхронном коде сложнее отслеживать (особенно с колбэками)
+
+Возможны race condition при неправильной работе с состоянием
+
+Критическое ограничение: один поток выполнения JavaScript. Если запускается тяжёлая синхронная операция (например, сложный расчёт или парсинг большого файла), весь сервер «встаёт».
+
+Вывод:
+
+Асинхронность в Node.js реализована максимально эффективно для сетевых и дисковых операций. Это одна из самых сильных сторон платформы, но она требует строгого контроля над CPU-нагрузкой и архитектурой кода.
+
+
+давай начнём с базы на MinIO
+
+MinIO — объектное хранилище, совместимое с S3 API. Не база данных. Хранит бинарные объекты (файлы), метаданные минимальны.
+
+Базовая модель:
+
+Bucket — контейнер объектов
+
+Object — файл + метаданные
+
+Key — уникальный путь внутри bucket
+
+Структура хранения:
+
+bucket/
+  user-uploads/
+    avatar_123.png
+  reports/
+    2026-03.pdf
+Сценарий использования в бэке:
+
+Клиент загружает файл
+
+Бэк принимает поток
+
+Бэк передаёт поток в MinIO
+
+MinIO сохраняет объект
+
+Бэк сохраняет ссылку (key) в БД
+
+MinIO не заменяет:
+
+PostgreSQL
+
+MongoDB
+
+Он дополняет их.
+
+Минимальный запуск (Docker):
+
+docker run -d \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  -e MINIO_ROOT_USER=admin \
+  -e MINIO_ROOT_PASSWORD=password \
+  minio/minio server /data --console-address ":9001"
+Доступ:
+
+API: http://localhost:9000
+
+Web UI: http://localhost:9001
+
+Подключение в Node.js:
+
+SDK:
+
+npm install minio
+Инициализация:
+
+const Minio = require('minio')
+
+const client = new Minio.Client({
+  endPoint: 'localhost',
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'password'
+})
+Создание bucket:
+
+await client.makeBucket('files')
+Загрузка файла:
+
+await client.putObject('files', 'avatar.png', fileStream)
+Получение файла:
+
+const stream = await client.getObject('files', 'avatar.png')
+Удаление:
+
+await client.removeObject('files', 'avatar.png')
+Критические свойства:
+
+Полностью асинхронный I/O → идеально ложится на Node.js
+
+Потоковая передача → не нужно держать файл в памяти
+
+Масштабирование через распределённое хранилище
+
+Поддержка presigned URL (обход бэка при загрузке)
+
+Архитектурный паттерн:
+
+Файлы → MinIO
+
+Метаданные (id, owner, path) → БД
+
+Бизнес-логика → Node.js
+
+Ограничение:
+
+MinIO не умеет:
+
+сложные запросы
+
+JOIN
+
+транзакции
+
+Это слой хранения, не вычислений.
+
+
+Не мне прям вообще как бызу MinIO установиьть давай оттуда начнём
+
+Установка MinIO как локального хранилища.
+
+Вариант 1. Docker (базовый, без лишнего)
+docker run -d \
+  --name minio \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  -e MINIO_ROOT_USER=admin \
+  -e MINIO_ROOT_PASSWORD=strongpassword \
+  -v minio_data:/data \
+  minio/minio server /data --console-address ":9001"
+Факты:
+
+9000 — S3 API
+
+9001 — web-консоль
+
+данные в volume minio_data
+
+Проверка:
+
+http://localhost:9001
+
+логин: admin / strongpassword
+
+Вариант 2. Docker Compose (фиксированная конфигурация)
+version: "3.9"
+
+services:
+  minio:
+    image: minio/minio
+    container_name: minio
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: strongpassword
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  minio_data:
+Запуск:
+
+docker-compose up -d
+Вариант 3. Без Docker (чистый бинарник)
+Linux:
+
+wget https://dl.min.io/server/minio/release/linux-amd64/minio
+chmod +x minio
+./minio server /data --console-address ":9001"
+С учётными данными:
+
+export MINIO_ROOT_USER=admin
+export MINIO_ROOT_PASSWORD=strongpassword
+./minio server /data --console-address ":9001"
+Минимальная проверка работоспособности
+Открыть UI
+
+Создать bucket (например files)
+
+Загрузить файл вручную
+
+Убедиться, что объект сохраняется
+
+Критические моменты
+Пароль не короче 8 символов
+
+Порт 9000 должен быть свободен
+
+Для продакшена:
+
+включается HTTPS
+
+внешний storage (не docker volume)
+
+отдельный reverse proxy (например nginx)
+
+Итоговая модель
+MinIO поднят → доступен S3 API → далее подключается Node.js и работает с объектами напрямую через поток.
+
+
+Я создал вот так Docker Compose
+как мне к нему подключиться
+
+Подключение к запущенному MinIO.
+
+1. Через браузер (проверка)
+http://localhost:9001
+
+логин/пароль — из MINIO_ROOT_USER и MINIO_ROOT_PASSWORD
+
+Это только консоль управления.
+
+2. Через S3 API (основное подключение)
+Endpoint:
+
+http://localhost:9000
+Данные:
+
+accessKey = MINIO_ROOT_USER
+
+secretKey = MINIO_ROOT_PASSWORD
+
+3. Подключение из Node.js
+const Minio = require('minio')
+
+const client = new Minio.Client({
+  endPoint: 'localhost',
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'strongpassword'
+})
+Проверка соединения:
+
+await client.listBuckets().then(console.log)
+Если выводит список — подключение корректно.
+
+4. Если Node.js в Docker
+Тогда localhost не работает.
+
+Используется имя сервиса из docker-compose:
+
+endPoint: 'minio'
+И порт остаётся 9000.
+
+5. Проверка сети
+Если не подключается:
+
+docker ps
+Проверить, что контейнер запущен.
+
+docker logs minio
+Проверить ошибки.
+
+6. Минимальный тест
+await client.makeBucket('test')
+Если bucket создаётся — система полностью рабочая.
+
+
+Напиши минимальный бэк для работы с базой MinIO для того чтобы я туда мог грузить файлы
+
+Минимальный бэк на Node.js для загрузки файлов в MinIO.
+
+Установка зависимостей
+npm init -y
+npm install express minio multer
+server.js
+const express = require('express')
+const Minio = require('minio')
+const multer = require('multer')
+
+const app = express()
+const upload = multer()
+
+// MinIO клиент
+const minioClient = new Minio.Client({
+  endPoint: 'localhost', // если в docker -> 'minio'
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'strongpassword'
+})
+
+const BUCKET = 'files'
+
+// создание bucket при старте
+async function initBucket() {
+  const exists = await minioClient.bucketExists(BUCKET).catch(() => false)
+  if (!exists) {
+    await minioClient.makeBucket(BUCKET)
+  }
+}
+
+// загрузка файла
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file
+
+    const fileName = Date.now() + '_' + file.originalname
+
+    await minioClient.putObject(
+      BUCKET,
+      fileName,
+      file.buffer,
+      file.size,
+      { 'Content-Type': file.mimetype }
+    )
+
+    res.json({
+      message: 'uploaded',
+      fileName
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// получение файла
+app.get('/file/:name', async (req, res) => {
+  try {
+    const stream = await minioClient.getObject(BUCKET, req.params.name)
+    stream.pipe(res)
+  } catch (err) {
+    res.status(404).json({ error: 'not found' })
+  }
+})
+
+app.listen(3000, async () => {
+  await initBucket()
+  console.log('Server started on port 3000')
+})
+Запуск
+node server.js
+Загрузка файла (пример через curl)
+curl -X POST http://localhost:3000/upload \
+  -F "file=@test.png"
+Получение файла
+http://localhost:3000/file/ИМЯ_ФАЙЛА
+Архитектура
+HTTP → Express
+
+файл → multer (в памяти)
+
+поток → MinIO
+
+хранение → bucket
+
+Ограничение текущей реализации
+файл целиком в RAM (multer memory storage)
+
+нет авторизации
+
+нет валидации
+
+нет сохранения метаданных
+
+Минимальный рабочий слой для интеграции с объектным хранилищем.
+
+
+PS C:\Users\ermol\OneDrive\Desktop\Диплом\backend> node server.js
+node:internal/process/promises:288
+            triggerUncaughtException(err, true /* fromPromise */);
+            ^
+
+Error: connect EACCES ::1:9000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1555:16) {
+  errno: -4092,
+  code: 'EACCES',
+  syscall: 'connect',
+  address: '::1',
+  port: 9000
+}
+
+Node.js v18.18.2
+PS C:\Users\ermol\OneDrive\Desktop\Диплом\backend> 
+
+Ошибка EACCES ::1:9000 означает, что Node.js пытается подключиться к IPv6 адресу ::1 (localhost) на порт 9000, но соединение не разрешено или порт недоступен. В Docker MinIO по умолчанию слушает IPv4 127.0.0.1.
+
+Исправление: явно указать IPv4 в клиенте MinIO:
+
+const minioClient = new Minio.Client({
+  endPoint: '127.0.0.1', // вместо 'localhost'
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'strongpassword'
+})
+Дополнительно проверить:
+
+Контейнер MinIO запущен:
+
+docker ps
+Порт 9000 доступен на машине (не занят другим процессом).
+
+Если Node.js запущен внутри Docker, 127.0.0.1 будет ссылаться на контейнер, а не на хост. В этом случае используйте имя сервиса minio из docker-compose:
+
+endPoint: 'minio'
+
+PS C:\Users\ermol\OneDrive\Desktop\Диплом> curl -X POST http://localhost:3000/upload \
+>>   -F "file=@test.png"
+Invoke-WebRequest : Не удается найти параметр, соответствующий имени параметра "X".
+строка:1 знак:6
++ curl -X POST http://localhost:3000/upload \
++      ~~
+    + CategoryInfo          : InvalidArgument: (:) [Invoke-WebRequest], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.InvokeWebRequestCommand
+ 
+-F : Имя "-F" не распознано как имя командлета, функции, файла сценария или выполняемой программы. Проверьте правильность написания имени, а также наличие и п
+равильность пути, после чего повторите попытку.
+строка:2 знак:3
++   -F "file=@test.png"
++   ~~
+    + CategoryInfo          : ObjectNotFound: (-F:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+
+PowerShell перехватывает curl и преобразует его в Invoke-WebRequest, поэтому параметры -X и -F не работают.
+
+Варианты:
+
+1. Использовать curl.exe (в Windows есть реальный curl)
+curl.exe -X POST http://localhost:3000/upload -F "file=@test.png"
+2. Использовать Invoke-RestMethod в PowerShell
+$File = Get-Item "test.png"
+$Form = @{ file = $File }
+Invoke-RestMethod -Uri http://localhost:3000/upload -Method Post -Form $Form
+3. Через Postman или любой HTTP клиент
+Метод: POST
+
+URL: http://localhost:3000/upload
+
+Body → form-data → ключ file → выбрать файл
+
+PowerShell по умолчанию не воспринимает POSIX-параметры curl. Нужно явно вызывать curl.exe или использовать встроенные команды PowerShell.
+
+
+{"error":"Cannot read properties of undefined (reading 'originalname')"}curl: (3) URL rejected: Bad hostname
+-F : Имя "-F" не распознано как имя командлета, функции, файла сценария или выполняемой программы. Проверьте правильность написания имени, а также наличие и п
+равильность пути, после чего повторите попытку.
+строка:2 знак:3
++   -F "server.ts"
++   ~~
+    + CategoryInfo          : ObjectNotFound: (-F:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+Ошибка Cannot read properties of undefined (reading 'originalname') говорит о том, что req.file не передан, то есть файл не дошёл до multer. В PowerShell это связано с тем, что стандартный curl заменён Invoke-WebRequest, и -F не работает.
+
+Правильные варианты для загрузки файлов в Node.js + Multer на Windows:
+
+1. Использовать реальный curl
+В PowerShell вызов реального curl.exe:
+
+curl.exe -X POST http://localhost:3000/upload -F "file=@C:\Users\ermol\OneDrive\Desktop\Диплом\backend\test.png"
+Путь к файлу полный, с обратными слэшами
+
+Обязательно curl.exe, а не встроенный alias curl
+
+2. Через Postman или Insomnia
+Метод: POST
+
+URL: http://localhost:3000/upload
+
+Body → form-data
+
+Ключ: file
+
+Значение: выбрать файл
+
+3. Через PowerShell нативно
+$File = Get-Item "C:\Users\ermol\OneDrive\Desktop\Диплом\backend\test.png"
+$Form = @{ file = $File }
+Invoke-RestMethod -Uri http://localhost:3000/upload -Method Post -Form $Form
+Ключ file должен совпадать с upload.single('file') в сервере
+
+Файл дойдёт до multer → req.file будет определён
+
+Суть: Node.js видит undefined, потому что POST не содержит поля file. Использовать правильный инструмент для multipart/form-data.
+
+
+у меня уже есть мой bucket мне захардкодить или как то получать можно какие есть bucketы
+
+Не захардкодить. MinIO умеет отдавать список существующих bucket’ов через API. В Node.js это делается так:
+
+// Получение списка bucket’ов
+const buckets = await minioClient.listBuckets()
+console.log(buckets) // массив объектов { name, creationDate }
+Можно выбрать первый bucket автоматически:
+
+const buckets = await minioClient.listBuckets()
+const BUCKET = buckets.length ? buckets[0].name : 'defaultBucket'
+Или выдавать клиенту список доступных bucket’ов через отдельный эндпоинт:
+
+app.get('/buckets', async (req, res) => {
+  try {
+    const buckets = await minioClient.listBuckets()
+    res.json(buckets.map(b => b.name))
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+Так бэк не зависит от захардкоженного названия, а выбирает существующие bucket’ы динамически.
+
+
+сотри давай напишем заглушку, идея следующая мне надо будет определять тип файла а точнее на каком языке он написан и отправлять на нужную node, давай сейчас напишем масштаблируемую темку с асинхронным подходом, чтобы я мог отправить эти файлы на несколько нод "одновременно" и при получении ответа, я записывал его в bucket
+
+Схема: есть фронт-бэк, который принимает файлы, определяет их язык → распределяет задачи на несколько асинхронных «нод» → ждёт ответы → сохраняет результат в MinIO.
+
+Ниже минимальная масштабируемая заготовка на Node.js с асинхронностью через Promise.all и потоковую работу с MinIO.
+
+Установка зависимостей
+npm install express minio multer axios
+axios для эмуляции отправки на другие ноды
+
+multer для получения файлов
+
+minio для хранения результатов
+
+server.js
+const express = require('express')
+const multer = require('multer')
+const Minio = require('minio')
+const axios = require('axios')
+
+const app = express()
+const upload = multer()
+
+// MinIO клиент
+const minioClient = new Minio.Client({
+  endPoint: '127.0.0.1',
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'strongpassword'
+})
+
+const BUCKET = 'results'
+
+// Инициализация bucket
+async function initBucket() {
+  const exists = await minioClient.bucketExists(BUCKET).catch(() => false)
+  if (!exists) {
+    await minioClient.makeBucket(BUCKET)
+  }
+}
+
+// Заглушка определения языка по расширению
+function detectLanguage(filename) {
+  if (filename.endsWith('.js')) return 'js'
+  if (filename.endsWith('.py')) return 'python'
+  return 'unknown'
+}
+
+// Список нод для обработки (можно увеличить)
+const nodes = {
+  js: ['http://localhost:4001/process'],
+  python: ['http://localhost:4002/process']
+}
+
+// Отправка файла на все ноды языка
+async function distributeFile(language, file) {
+  const targets = nodes[language] || []
+  if (!targets.length) return { error: 'No nodes for this language' }
+
+  // Параллельная отправка на все ноды
+  const responses = await Promise.all(
+    targets.map(url =>
+      axios.post(url, file, { headers: { 'Content-Type': file.mimetype } })
+        .then(res => res.data)
+        .catch(err => ({ error: err.message }))
+    )
+  )
+
+  return responses
+}
+
+// Эндпоинт загрузки
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file
+    if (!file) return res.status(400).json({ error: 'No file provided' })
+
+    const language = detectLanguage(file.originalname)
+    const results = await distributeFile(language, file.buffer)
+
+    // Сохраняем результат в MinIO
+    const resultName = Date.now() + '_' + file.originalname + '.json'
+    await minioClient.putObject(BUCKET, resultName, JSON.stringify(results), {
+      'Content-Type': 'application/json'
+    })
+
+    res.json({ message: 'Processed', bucketFile: resultName, results })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.listen(3000, async () => {
+  await initBucket()
+  console.log('Server started on port 3000')
+})
+Что делает эта заглушка
+Загружает файл через /upload
+
+Определяет язык по расширению (detectLanguage)
+
+Параллельно отправляет файл на все ноды нужного языка (distributeFile)
+
+Ждёт все ответы (Promise.all)
+
+Записывает массив ответов в MinIO в bucket results
+
+Масштабирование
+Добавление нод — достаточно расширить объект nodes
+
+Асинхронная отправка гарантирует, что Node.js не блокируется
+
+Можно внедрить очередь заданий для более тяжёлых файлов
+
+Дальнейшие шаги
+Реализовать реальные обработчики на «нодах» (js/python)
+
+Добавить распознавание языка не только по расширению, но и по контенту
+
+Добавить потоковую обработку больших файлов (через streams)
+
+Если хочешь, я могу написать сразу пример «нод», которые принимают файл и возвращают заглушку результата, чтобы можно было тестировать распределение.
+
+
+можешь написать предпроцессор, который будет по сути составлять hash файла, и именно этот hash он будет тянуть в название в MInio
+
+Препроцессор: вычисляет хэш файла и использует его как ключ объекта в MinIO. Это устраняет дубликаты и даёт детерминированные имена.
+
+Хэш (SHA-256)
+const crypto = require('crypto')
+
+function getFileHash(buffer) {
+  return crypto
+    .createHash('sha256')
+    .update(buffer)
+    .digest('hex')
+}
+Встраивание в загрузку
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file
+    if (!file) return res.status(400).json({ error: 'No file' })
+
+    const hash = getFileHash(file.buffer)
+
+    // извлечение расширения
+    const ext = file.originalname.includes('.')
+      ? file.originalname.split('.').pop()
+      : 'bin'
+
+    const objectName = `${hash}.${ext}`
+
+    // проверка на существование (дедупликация)
+    const exists = await minioClient
+      .statObject(BUCKET, objectName)
+      .then(() => true)
+      .catch(() => false)
+
+    if (!exists) {
+      await minioClient.putObject(
+        BUCKET,
+        objectName,
+        file.buffer,
+        file.size,
+        { 'Content-Type': file.mimetype }
+      )
+    }
+
+    res.json({
+      hash,
+      storedAs: objectName,
+      deduplicated: exists
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+Поведение
+одинаковые файлы → одинаковый hash → один объект в bucket
+
+разные файлы → разные ключи
+
+имя файла больше не влияет на хранение
+
+можно использовать hash как идентификатор в системе
+
+Расширение
+Хэш как основа для пайплайна:
+
+hash → ключ задачи
+
+hash → имя результата (hash.json)
+
+hash → кэш (если уже обработан, повторно не отправлять на ноды)
+
+Ограничение текущей реализации
+используется buffer → файл в памяти
+
+для больших файлов нужен streaming-хэш:
+
+const hash = crypto.createHash('sha256')
+stream.on('data', chunk => hash.update(chunk))
+stream.on('end', () => {
+  const result = hash.digest('hex')
+})
+
+а есть варик хранить ориг имя 
+
+Да. Имя файла не должно участвовать в ключе, оно хранится отдельно как метаданные объекта в MinIO.
+
+Сохранение оригинального имени
+await minioClient.putObject(
+  BUCKET,
+  objectName, // hash.ext
+  file.buffer,
+  file.size,
+  {
+    'Content-Type': file.mimetype,
+    'X-Amz-Meta-Original-Name': file.originalname
+  }
+)
+Получение оригинального имени
+const stat = await minioClient.statObject(BUCKET, objectName)
+
+const originalName = stat.metaData['x-amz-meta-original-name']
+Модель хранения
+objectName → технический идентификатор (hash)
+
+X-Amz-Meta-Original-Name → исходное имя файла
+
+Альтернатива
+Если метаданных недостаточно:
+
+хранить в PostgreSQL
+
+hash
+
+originalName
+
+userId
+
+timestamp
+
+MinIO — только storage. Логика и связи — вне его.
+
+
+а куда это вставит то? const stat = await minioClient.statObject(BUCKET, objectName)
+
+const originalName = stat.metaData['x-amz-meta-original-name']
+
+Этот код не в момент загрузки. Он используется при чтении файла или при отдаче метаданных.
+
+1. Вставка при загрузке (где putObject)
+await minioClient.putObject(
+  BUCKET,
+  objectName,
+  file.buffer,
+  file.size,
+  {
+    'Content-Type': file.mimetype,
+    'X-Amz-Meta-Original-Name': file.originalname
+  }
+)
+2. Использование при получении файла
+Отдельный эндпоинт:
+
+app.get('/file/:name', async (req, res) => {
+  try {
+    const objectName = req.params.name
+
+    // получаем метаданные
+    const stat = await minioClient.statObject(BUCKET, objectName)
+    const originalName = stat.metaData['x-amz-meta-original-name']
+
+    // получаем сам файл
+    const stream = await minioClient.getObject(BUCKET, objectName)
+
+    // пробрасываем имя клиенту
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${originalName || objectName}"`
+    )
+
+    stream.pipe(res)
+  } catch (err) {
+    res.status(404).json({ error: 'not found' })
+  }
+})
+Суть
+putObject → запись метаданных
+
+statObject → чтение метаданных
+
+используется только при извлечении или логике, не при сохранении
+
+
+давай ка мне весь файл а то я тебя не понял
+
+Полный минимальный сервер с хэшированием, сохранением оригинального имени в метаданные и возможностью скачать файл.
+
+const express = require('express')
+const multer = require('multer')
+const Minio = require('minio')
+const crypto = require('crypto')
+
+const app = express()
+const upload = multer()
+
+// MinIO клиент
+const minioClient = new Minio.Client({
+  endPoint: '127.0.0.1',
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'strongpassword'
+})
+
+const BUCKET = 'files'
+
+// --- init bucket ---
+async function initBucket() {
+  const exists = await minioClient.bucketExists(BUCKET).catch(() => false)
+  if (!exists) {
+    await minioClient.makeBucket(BUCKET)
+  }
+}
+
+// --- hash ---
+function getFileHash(buffer) {
+  return crypto
+    .createHash('sha256')
+    .update(buffer)
+    .digest('hex')
+}
+
+// --- upload ---
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file
+    if (!file) {
+      return res.status(400).json({ error: 'No file' })
+    }
+
+    const hash = getFileHash(file.buffer)
+
+    const ext = file.originalname.includes('.')
+      ? file.originalname.split('.').pop()
+      : 'bin'
+
+    const objectName = `${hash}.${ext}`
+
+    // проверка существования
+    const exists = await minioClient
+      .statObject(BUCKET, objectName)
+      .then(() => true)
+      .catch(() => false)
+
+    if (!exists) {
+      await minioClient.putObject(
+        BUCKET,
+        objectName,
+        file.buffer,
+        file.size,
+        {
+          'Content-Type': file.mimetype,
+          'X-Amz-Meta-Original-Name': file.originalname
+        }
+      )
+    }
+
+    res.json({
+      hash,
+      storedAs: objectName,
+      deduplicated: exists
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// --- download ---
+app.get('/file/:name', async (req, res) => {
+  try {
+    const objectName = req.params.name
+
+    // метаданные
+    const stat = await minioClient.statObject(BUCKET, objectName)
+    const originalName = stat.metaData['x-amz-meta-original-name']
+
+    // файл
+    const stream = await minioClient.getObject(BUCKET, objectName)
+
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${originalName || objectName}"`
+    )
+
+    stream.pipe(res)
+  } catch (err) {
+    res.status(404).json({ error: 'not found' })
+  }
+})
+
+app.listen(3000, async () => {
+  await initBucket()
+  console.log('Server started on port 3000')
+})
+
+напиши мне первый воркер который будет анализировать файлы node js 
+
+Первый воркер (нода), принимающий файл и выполняющий анализ для JavaScript. Асинхронный, без состояния, готов к горизонтальному масштабированию.
+
+Установка
+npm init -y
+npm install express
+worker-js.js
+const express = require('express')
+
+const app = express()
+
+// принимаем raw body (файл как поток/буфер)
+app.use(express.raw({ type: '*/*', limit: '10mb' }))
+
+// простейший анализ JS
+function analyzeJS(code) {
+  const text = code.toString()
+
+  const result = {
+    lines: text.split('\n').length,
+    functions: (text.match(/function\s+/g) || []).length,
+    arrowFunctions: (text.match(/=>/g) || []).length,
+    imports: (text.match(/import\s+/g) || []).length,
+    requires: (text.match(/require\(/g) || []).length
+  }
+
+  return result
+}
+
+// endpoint обработки
+app.post('/process', async (req, res) => {
+  try {
+    const buffer = req.body
+
+    if (!buffer || !buffer.length) {
+      return res.status(400).json({ error: 'Empty file' })
+    }
+
+    // асинхронная обёртка (не блокирует event loop надолго)
+    const result = await Promise.resolve().then(() => analyzeJS(buffer))
+
+    res.json({
+      status: 'ok',
+      analysis: result
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.listen(4001, () => {
+  console.log('JS worker running on port 4001')
+})
+Запуск
+node worker-js.js
+Поведение
+принимает raw файл (Content-Type: любой)
+
+анализирует как текст JS
+
+возвращает JSON
+
+Масштабирование
+запускается несколько экземпляров на разных портах/хостах
+
+балансировка на уровне основного бэка
+
+каждый воркер независим
+
+Ограничения текущей заглушки
+анализ через regex (нет AST)
+
+весь файл в памяти
+
+нет таймаутов и контроля нагрузки
+
+Следующий уровень
+парсинг через AST (например через Babel)
+
+извлечение зависимостей, сложность функций, граф вызовов
+
+возврат структурированных данных вместо простых счётчиков
+
+
+не мне надо прямо чтобы он анализировал прям с AST и при этом писал в MINIO в bucket processed_files
+
+Воркер: принимает JS-файл → строит AST → извлекает структуру → сохраняет результат в MinIO в bucket processed_files.
+
+Установка
+npm init -y
+npm install express @babel/parser @babel/traverse minio crypto
+worker-js.js
+const express = require('express')
+const parser = require('@babel/parser')
+const traverse = require('@babel/traverse').default
+const Minio = require('minio')
+const crypto = require('crypto')
+
+const app = express()
+
+app.use(express.raw({ type: '*/*', limit: '10mb' }))
+
+// MinIO
+const minioClient = new Minio.Client({
+  endPoint: '127.0.0.1',
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'strongpassword'
+})
+
+const BUCKET = 'processed_files'
+
+// init bucket
+async function initBucket() {
+  const exists = await minioClient.bucketExists(BUCKET).catch(() => false)
+  if (!exists) {
+    await minioClient.makeBucket(BUCKET)
+  }
+}
+
+// hash
+function getHash(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex')
+}
+
+// AST анализ
+function analyzeAST(code) {
+  const ast = parser.parse(code, {
+    sourceType: 'unambiguous',
+    plugins: ['jsx']
+  })
+
+  const result = {
+    functions: 0,
+    arrowFunctions: 0,
+    imports: [],
+    requires: [],
+    variables: []
+  }
+
+  traverse(ast, {
+    FunctionDeclaration(path) {
+      result.functions++
+    },
+    ArrowFunctionExpression(path) {
+      result.arrowFunctions++
+    },
+    ImportDeclaration(path) {
+      result.imports.push(path.node.source.value)
+    },
+    CallExpression(path) {
+      if (
+        path.node.callee.name === 'require' &&
+        path.node.arguments.length
+      ) {
+        result.requires.push(path.node.arguments[0].value)
+      }
+    },
+    VariableDeclarator(path) {
+      if (path.node.id.name) {
+        result.variables.push(path.node.id.name)
+      }
+    }
+  })
+
+  return result
+}
+
+// endpoint
+app.post('/process', async (req, res) => {
+  try {
+    const buffer = req.body
+    if (!buffer || !buffer.length) {
+      return res.status(400).json({ error: 'Empty file' })
+    }
+
+    const code = buffer.toString()
+    const hash = getHash(buffer)
+
+    // AST анализ
+    const analysis = await Promise.resolve().then(() => analyzeAST(code))
+
+    const objectName = `${hash}.json`
+
+    // запись в MinIO
+    await minioClient.putObject(
+      BUCKET,
+      objectName,
+      JSON.stringify(analysis),
+      {
+        'Content-Type': 'application/json'
+      }
+    )
+
+    res.json({
+      status: 'processed',
+      hash,
+      storedAs: objectName
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.listen(4001, async () => {
+  await initBucket()
+  console.log('JS AST worker running on port 4001')
+})
+Что делает
+Принимает файл как raw buffer
+
+Парсит через AST
+
+Обходит дерево (traverse)
+
+Извлекает:
+
+функции
+
+стрелочные функции
+
+импорты
+
+require
+
+переменные
+
+Генерирует hash
+
+Сохраняет результат как hash.json в bucket processed_files
+
+Архитектурное свойство
+воркер полностью независим
+
+масштабируется горизонтально
+
+не хранит состояние
+
+результат детерминирован (hash → файл → результат)
+
+Ограничения
+весь файл в памяти
+
+нет дедупликации результатов
+
+нет проверки существующего hash.json перед записью
+
+AST парсинг CPU-bound → при нагрузке нужен пул воркеров или отдельные процессы
+
+
+Смотри у меня по идее будет асинхрон, типа у меня основной сервер будет кидать на воркер файл, тоесть смотри у меня сервер сначала пишет в minio по старому правилу: файл сначала пишется в bucket - preprocessed, при этом если файл с таким хэшем уже есть то писать его не надо, потом то что он записал, он должен отправить в воркер, при этом воркер должен сформировать JSON, и записать его с таким же именем только в бакет процессед файл, и должен отписать название обработанного json в server
+
+Цепочка:
+server → preprocessed (дедупликация по hash) → worker → processed_files → ответ серверу с именем JSON.
+
+Ниже минимальная связка.
+
+1. Основной сервер
+const express = require('express')
+const multer = require('multer')
+const Minio = require('minio')
+const crypto = require('crypto')
+const axios = require('axios')
+
+const app = express()
+const upload = multer()
+
+const minioClient = new Minio.Client({
+  endPoint: '127.0.0.1',
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'strongpassword'
+})
+
+const PRE_BUCKET = 'preprocessed'
+
+// init bucket
+async function init() {
+  const exists = await minioClient.bucketExists(PRE_BUCKET).catch(() => false)
+  if (!exists) await minioClient.makeBucket(PRE_BUCKET)
+}
+
+function getHash(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex')
+}
+
+// загрузка + отправка в воркер
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file
+    if (!file) return res.status(400).json({ error: 'No file' })
+
+    const hash = getHash(file.buffer)
+    const ext = file.originalname.split('.').pop()
+    const objectName = `${hash}.${ext}`
+
+    // дедупликация
+    const exists = await minioClient
+      .statObject(PRE_BUCKET, objectName)
+      .then(() => true)
+      .catch(() => false)
+
+    if (!exists) {
+      await minioClient.putObject(
+        PRE_BUCKET,
+        objectName,
+        file.buffer,
+        file.size,
+        {
+          'Content-Type': file.mimetype,
+          'X-Amz-Meta-Original-Name': file.originalname
+        }
+      )
+    }
+
+    // отправка в воркер
+    const workerResponse = await axios.post(
+      'http://localhost:4001/process',
+      {
+        bucket: PRE_BUCKET,
+        objectName
+      }
+    )
+
+    res.json({
+      uploaded: !exists,
+      objectName,
+      processedFile: workerResponse.data.processedFile
+    })
+
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.listen(3000, async () => {
+  await init()
+  console.log('Server started on 3000')
+})
+2. Воркер
+const express = require('express')
+const Minio = require('minio')
+const parser = require('@babel/parser')
+const traverse = require('@babel/traverse').default
+
+const app = express()
+app.use(express.json())
+
+const minioClient = new Minio.Client({
+  endPoint: '127.0.0.1',
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'strongpassword'
+})
+
+const OUT_BUCKET = 'processed_files'
+
+// init bucket
+async function init() {
+  const exists = await minioClient.bucketExists(OUT_BUCKET).catch(() => false)
+  if (!exists) await minioClient.makeBucket(OUT_BUCKET)
+}
+
+// загрузка файла из MinIO
+async function getFile(bucket, objectName) {
+  const stream = await minioClient.getObject(bucket, objectName)
+
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    stream.on('data', chunk => chunks.push(chunk))
+    stream.on('end', () => resolve(Buffer.concat(chunks)))
+    stream.on('error', reject)
+  })
+}
+
+// AST анализ
+function analyze(code) {
+  const ast = parser.parse(code, {
+    sourceType: 'unambiguous',
+    plugins: ['jsx']
+  })
+
+  const result = {
+    functions: 0,
+    imports: []
+  }
+
+  traverse(ast, {
+    FunctionDeclaration() {
+      result.functions++
+    },
+    ImportDeclaration(path) {
+      result.imports.push(path.node.source.value)
+    }
+  })
+
+  return result
+}
+
+// обработка
+app.post('/process', async (req, res) => {
+  try {
+    const { bucket, objectName } = req.body
+
+    // читаем файл из preprocessed
+    const buffer = await getFile(bucket, objectName)
+    const code = buffer.toString()
+
+    const analysis = analyze(code)
+
+    const resultName = objectName.replace(/\.[^.]+$/, '.json')
+
+    // запись результата
+    await minioClient.putObject(
+      OUT_BUCKET,
+      resultName,
+      JSON.stringify(analysis),
+      {
+        'Content-Type': 'application/json'
+      }
+    )
+
+    res.json({
+      processedFile: resultName
+    })
+
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.listen(4001, async () => {
+  await init()
+  console.log('Worker started on 4001')
+})
+Поведение системы
+Сервер:
+
+считает hash
+
+пишет в preprocessed (если нет)
+
+отправляет {bucket, objectName} воркеру
+
+Воркер:
+
+читает файл из MinIO
+
+строит AST
+
+создаёт JSON
+
+пишет в processed_files с тем же именем (hash.json)
+
+возвращает имя файла
+
+Сервер:
+
+получает processedFile
+
+может сохранять или отдавать клиенту
+
+Свойства
+нет передачи файла между сервисами → только ссылки
+
+дедупликация на входе
+
+детерминированный pipeline
+
+горизонтальное масштабирование воркеров
+
+асинхронная модель без блокировок
+
+
+Как эту ебалду запустить
+
+Минимальный запуск всей цепочки.
+
+1. Запустить MinIO
+Если уже есть docker-compose:
+
+docker-compose up -d
+Проверка:
+
+http://localhost:9001 открывается
+
+логин/пароль корректны
+
+2. Подготовить воркер
+Папка worker:
+
+npm init -y
+npm install express minio @babel/parser @babel/traverse
+node worker-js.js
+Ожидаемый вывод:
+
+Worker started on 4001
+3. Подготовить основной сервер
+Папка backend:
+
+npm init -y
+npm install express multer minio axios
+node server.js
+Ожидаемый вывод:
+
+Server started on 3000
+4. Проверка связки
+В PowerShell:
+
+curl.exe -X POST http://localhost:3000/upload -F "file=@C:\путь\до\файла.js"
+5. Что должно произойти
+Сервер:
+
+считает hash
+
+пишет файл в bucket preprocessed
+
+Сервер → воркер:
+
+отправляет {bucket, objectName}
+
+Воркер:
+
+читает файл из MinIO
+
+делает AST анализ
+
+пишет hash.json в processed_files
+
+Ответ:
+
+{
+  "uploaded": true,
+  "objectName": "hash.js",
+  "processedFile": "hash.json"
+}
+6. Проверка результата
+Зайти в UI MinIO:
+
+bucket preprocessed → исходный файл
+
+bucket processed_files → JSON
+
+7. Типовые поломки
+порт 9000 занят → MinIO не стартует
+
+127.0.0.1 vs minio (если Docker)
+
+воркер не запущен → сервер зависает на axios
+
+неправильный путь к файлу в curl
+
+Итог
+Запущено три процесса:
+
+MinIO
+
+server (3000)
+
+worker (4001)
+
+Цепочка работает end-to-end.
+
+
+PS C:\Users\ermol\OneDrive\Desktop\Диплом\backend> npm init -y
+>> npm install express minio @babel/parser @babel/traverse    
+>> node worker-js.js
+Wrote to C:\Users\ermol\OneDrive\Desktop\Диплом\backend\package.json:
+
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "minio": "^8.0.7",
+    "multer": "^2.1.1"
+  },
+  "devDependencies": {},
+  "description": ""
+}
+
+
+
+added 16 packages, and audited 122 packages in 7s
+
+29 packages are looking for funding
+  run npm fund for details
+
+2 high severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+
+Run npm audit for details.
+node:internal/modules/cjs/loader:1080
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Users\ermol\OneDrive\Desktop\Диплом\backend\worker-js.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1077:15)
+    at Module._load (node:internal/modules/cjs/loader:922:27)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:86:12)
+    at node:internal/main/run_main_module:23:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+При запуске worker 
+
+Ошибка MODULE_NOT_FOUND означает, что файла worker-js.js физически нет в директории backend.
+
+Исправление
+1. Создать файл
+В папке backend создать файл:
+
+worker-js.js
+Структура должна быть:
+
+backend/
+ ├─ server.js
+ ├─ worker-js.js
+ ├─ package.json
+2. Вставить код воркера
+Открыть worker-js.js и вставить код, который был дан ранее.
+
+3. Запуск
+node worker-js.js
+Альтернатива (чистая архитектура)
+Разделить сервисы:
+
+project/
+ ├─ backend/   → server.js
+ ├─ worker/    → worker-js.js
+Тогда:
+
+cd worker
+npm init -y
+npm install express minio @babel/parser @babel/traverse
+node worker-js.js
+Суть ошибки
+Node.js ищет файл по пути:
+
+C:\...\backend\worker-js.js
+и не находит его. Это не ошибка зависимостей, а отсутствие файла.
+
+
+{
+    "error": "connect EACCES ::1:4001"
+}
+
+Ошибка EACCES ::1:4001 указывает, что сервер не может подключиться к воркеру на IPv6 ::1 (localhost), порт 4001. Причины:
+
+Воркер не запущен.
+
+Проверь node worker-js.js и убедись, что вывод:
+
+Worker started on 4001
+Порт заблокирован или используется другим процессом.
+
+Проверить командой в PowerShell:
+
+netstat -ano | findstr 4001
+Если занят, убить процесс:
+
+taskkill /PID <pid> /F
+Node пытается подключиться по IPv6 (::1), а воркер слушает IPv4 (127.0.0.1).
+
+Исправить в server.js:
+
+// axios.post('http://localhost:4001/process', {...})
+// заменить на
+axios.post('http://127.0.0.1:4001/process', {...})
+или в воркере слушать на всех интерфейсах:
+
+app.listen(4001, '::', async () => {
+  await init()
+  console.log('Worker started on 4001')
+})
+После исправления:
+
+Запусти воркер node worker-js.js.
+
+Убедись, что он слушает 4001 на 127.0.0.1.
+
+Запусти сервер node server.js.
+
+Отправь файл.
+
+Соединение должно пройти.
+
+
+В целом оно работает
+
+Система работает:
+
+сервер пишет в preprocessed с дедупликацией,
+
+воркер читает файл, анализирует AST, пишет JSON в processed_files,
+
+сервер получает имя обработанного JSON.
+
+Все процессы асинхронны, масштабируются горизонтально, файл между сервисами не передаётся, передаются только ссылки на MinIO.
+
+
+В целом оно работает но меня не устраивает то как оно работает, мне же прям надо функционал обернутый в AST, а не просто сколько у меня чего, надо прям зависимости подтянуть, надо чтобы связь функций отображалась их названия и тд кароче что то типа вот такого, кароче развёрнутый продвинутую
+
+Понял. Нужно перейти от простых счетчиков к полноценному анализу AST с построением графа зависимостей функций, переменных, импортов, включая:
+
+имена функций и стрелочных функций, их аргументы
+
+вызовы функций внутри функций (связи)
+
+зависимости через import и require
+
+глобальные переменные
+
+вложенные функции
+
+Результат — JSON с деревом и графовыми связями, который можно сразу сохранить в MinIO (processed_files).
+
+Ниже пример продвинутого воркера для Node.js:
+
+const express = require('express')
+const Minio = require('minio')
+const parser = require('@babel/parser')
+const traverse = require('@babel/traverse').default
+
+const app = express()
+app.use(express.json())
+
+const minioClient = new Minio.Client({
+  endPoint: '127.0.0.1',
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'strongpassword'
+})
+
+const OUT_BUCKET = 'processed_files'
+
+async function init() {
+  const exists = await minioClient.bucketExists(OUT_BUCKET).catch(() => false)
+  if (!exists) await minioClient.makeBucket(OUT_BUCKET)
+}
+
+async function getFile(bucket, objectName) {
+  const stream = await minioClient.getObject(bucket, objectName)
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    stream.on('data', c => chunks.push(c))
+    stream.on('end', () => resolve(Buffer.concat(chunks)))
+    stream.on('error', reject)
+  })
+}
+
+// AST graph builder
+function analyzeAST(code) {
+  const ast = parser.parse(code, {
+    sourceType: 'unambiguous',
+    plugins: ['jsx', 'typescript']
+  })
+
+  const graph = {
+    functions: {}, // {name: {params: [], calls: [], parent: null}}
+    imports: [],
+    requires: [],
+    variables: []
+  }
+
+  const currentFunctionStack = []
+
+  traverse(ast, {
+    FunctionDeclaration(path) {
+      const name = path.node.id?.name || '<anonymous>'
+      const params = path.node.params.map(p => p.name || '<unknown>')
+      const parent = currentFunctionStack[currentFunctionStack.length - 1] || null
+
+      graph.functions[name] = { params, calls: [], parent }
+
+      currentFunctionStack.push(name)
+    },
+    ArrowFunctionExpression(path) {
+      const name = path.node.id?.name || '<arrow>'
+      const params = path.node.params.map(p => p.name || '<unknown>')
+      const parent = currentFunctionStack[currentFunctionStack.length - 1] || null
+
+      graph.functions[name] = { params, calls: [], parent }
+      currentFunctionStack.push(name)
+    },
+    CallExpression(path) {
+      const callee = path.node.callee.name || path.node.callee?.property?.name || '<unknown>'
+      const currentFn = currentFunctionStack[currentFunctionStack.length - 1]
+      if (currentFn) {
+        graph.functions[currentFn].calls.push(callee)
+      }
+      if (path.node.callee.name === 'require' && path.node.arguments.length) {
+        graph.requires.push(path.node.arguments[0].value)
+      }
+    },
+    ImportDeclaration(path) {
+      graph.imports.push(path.node.source.value)
+    },
+    VariableDeclarator(path) {
+      if (path.node.id.name) graph.variables.push(path.node.id.name)
+    },
+    'FunctionDeclaration|ArrowFunctionExpression:exit'(path) {
+      currentFunctionStack.pop()
+    }
+  })
+
+  return graph
+}
+
+app.post('/process', async (req, res) => {
+  try {
+    const { bucket, objectName } = req.body
+    const buffer = await getFile(bucket, objectName)
+    const code = buffer.toString()
+
+    const analysis = analyzeAST(code)
+
+    const resultName = objectName.replace(/\.[^.]+$/, '.json')
+
+    await minioClient.putObject(
+      OUT_BUCKET,
+      resultName,
+      JSON.stringify(analysis, null, 2),
+      { 'Content-Type': 'application/json' }
+    )
+
+    res.json({ processedFile: resultName })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.listen(4001, async () => {
+  await init()
+  console.log('Advanced JS AST worker running on 4001')
+})
+Особенности
+Граф функций
+
+functions[name] содержит:
+
+params — список аргументов
+
+calls — какие функции внутри вызываются
+
+parent — имя родительской функции (для вложенных)
+
+Импорты и require
+
+собираются в отдельные массивы, легко строить зависимости между модулями
+
+Переменные
+
+глобальные и локальные (если нужно, можно расширить до scope дерева)
+
+JSON для MinIO
+
+сохранение как hash.json
+
+готов к визуализации или дальнейшему анализу
+
+Масштабируемость
+
+воркер статeless
+
+можно запускать несколько воркеров параллельно
+
+Если хочешь, я могу сразу написать следующую версию воркера с построением полного графа вызовов и вложенных функций в виде DAG, который будет пригоден для визуализации связей в вебе. Это уже будет почти как IDE-уровень анализа.
+
+
+{
+    "error": "Request failed with status code 500"
+}
+
+Ошибка 500 — это внутренняя ошибка воркера. Причина почти всегда связана с разбором AST или чтением файла из MinIO.
+
+Для точной диагностики нужно включить логирование ошибок в воркере.
+
+1. Обернуть обработку в try/catch с логом
+В app.post('/process'):
+
+app.post('/process', async (req, res) => {
+  try {
+    const { bucket, objectName } = req.body
+    const buffer = await getFile(bucket, objectName)
+    const code = buffer.toString()
+
+    let analysis
+    try {
+      analysis = analyzeAST(code)
+    } catch (err) {
+      console.error('AST parse error:', err)
+      return res.status(500).json({ error: 'AST parse failed', details: err.message })
+    }
+
+    const resultName = objectName.replace(/\.[^.]+$/, '.json')
+
+    await minioClient.putObject(
+      OUT_BUCKET,
+      resultName,
+      JSON.stringify(analysis, null, 2),
+      { 'Content-Type': 'application/json' }
+    )
+
+    res.json({ processedFile: resultName })
+  } catch (err) {
+    console.error('Worker internal error:', err)
+    res.status(500).json({ error: 'Worker failed', details: err.message })
+  }
+})
+2. Потенциальные причины ошибки
+Файл не JS/TS (например бинарный) → @babel/parser падает.
+
+Слишком большой файл → превышен лимит памяти.
+
+Плохой путь к MinIO → getFile бросает.
+
+Синтаксическая ошибка в коде → парсер не смог построить AST.
+
+3. Рекомендации
+Проверить, что файл реально текстовый JS/TS.
+
+Можно добавить try/catch прямо внутри analyzeAST для игнорирования отдельных узлов.
+
+В логах воркера появится точная причина ошибки.
+
+Если хочешь, я могу переписать воркер, чтобы он не падал на любых файлах, а просто возвращал частичный AST или пустой граф при ошибке синтаксиса. Это гарантирует, что сервер никогда не получит 500.
+
+
+
+Advanced JS AST worker running on 4001
+AST parse error: Error: You gave us a visitor for the node type ArrowFunctionExpression:exit but it's not a valid type in @babel/traverse 7.29.0
+    at verify$1 (C:\Users\ermol\OneDrive\Desktop\Диплом\backend\node_modules\@babel\traverse\lib\visitors.js:105:13)
+    at Object.explode$1 [as explode] (C:\Users\ermol\OneDrive\Desktop\Диплом\backend\node_modules\@babel\traverse\lib\visitors.js:41:3)
+    at traverse (C:\Users\ermol\OneDrive\Desktop\Диплом\backend\node_modules\@babel\traverse\lib\index.js:52:12)
+    at analyzeAST (C:\Users\ermol\OneDrive\Desktop\Диплом\backend\worker-js.js:50:3)
+    at C:\Users\ermol\OneDrive\Desktop\Диплом\backend\worker-js.js:100:18
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+Ошибка говорит, что запись вида
+
+'ArrowFunctionExpression:exit'(path) { … }
+не поддерживается в вашей версии @babel/traverse (7.29.0). Для traverse корректно использовать отдельные функции enter и exit через объект exit внутри visitor.
+
+Нужно заменить:
+
+'FunctionDeclaration|ArrowFunctionExpression:exit'(path) {
+  currentFunctionStack.pop()
+}
+на правильный вариант:
+
+FunctionDeclaration: {
+  exit(path) {
+    currentFunctionStack.pop()
+  }
+},
+ArrowFunctionExpression: {
+  exit(path) {
+    currentFunctionStack.pop()
+  }
+}
+То есть visitor теперь выглядит так:
+
+traverse(ast, {
+  FunctionDeclaration: {
+    enter(path) {
+      const name = path.node.id?.name || '<anonymous>'
+      const params = path.node.params.map(p => p.name || '<unknown>')
+      const parent = currentFunctionStack[currentFunctionStack.length - 1] || null
+      graph.functions[name] = { params, calls: [], parent }
+      currentFunctionStack.push(name)
+    },
+    exit(path) {
+      currentFunctionStack.pop()
+    }
+  },
+  ArrowFunctionExpression: {
+    enter(path) {
+      const name = path.node.id?.name || '<arrow>'
+      const params = path.node.params.map(p => p.name || '<unknown>')
+      const parent = currentFunctionStack[currentFunctionStack.length - 1] || null
+      graph.functions[name] = { params, calls: [], parent }
+      currentFunctionStack.push(name)
+    },
+    exit(path) {
+      currentFunctionStack.pop()
+    }
+  },
+  CallExpression(path) {
+    const callee = path.node.callee.name || path.node.callee?.property?.name || '<unknown>'
+    const currentFn = currentFunctionStack[currentFunctionStack.length - 1]
+    if (currentFn) graph.functions[currentFn].calls.push(callee)
+    if (path.node.callee.name === 'require' && path.node.arguments.length) {
+      graph.requires.push(path.node.arguments[0].value)
+    }
+  },
+  ImportDeclaration(path) {
+    graph.imports.push(path.node.source.value)
+  },
+  VariableDeclarator(path) {
+    if (path.node.id.name) graph.variables.push(path.node.id.name)
+  }
+})
+После этой правки воркер перестанет падать на :exit.
+
+Запусти заново воркер после правки — ошибки 500 исчезнут.
+
+
+Посмотри на это const express = require('express')
+const Minio = require('minio')
+const parser = require('@babel/parser')
+const traverse = require('@babel/traverse').default
+
+const app = express()
+app.use(express.json())
+
+const minioClient = new Minio.Client({
+  endPoint: '127.0.0.1',
+  port: 9000,
+  useSSL: false,
+  accessKey: 'admin',
+  secretKey: 'strongpassword'
+})
+
+const OUT_BUCKET = 'processedfiles'
+
+async function init() {
+  const exists = await minioClient.bucketExists(OUT_BUCKET).catch(() => false)
+  if (!exists) await minioClient.makeBucket(OUT_BUCKET)
+}
+
+async function getFile(bucket, objectName) {
+  const stream = await minioClient.getObject(bucket, objectName)
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    stream.on('data', c => chunks.push(c))
+    stream.on('end', () => resolve(Buffer.concat(chunks)))
+    stream.on('error', reject)
+  })
+}
+
+// AST graph builder
+function analyzeAST(code) {
+  const ast = parser.parse(code, {
+    sourceType: 'unambiguous',
+    plugins: ['jsx', 'typescript']
+  })
+
+  const graph = {
+    functions: {}, // {name: {params: [], calls: [], parent: null}}
+    imports: [],
+    requires: [],
+    variables: []
+  }
+
+  const currentFunctionStack = []
+
+  traverse(ast, {
+    FunctionDeclaration(path) {
+      const name = path.node.id?.name || '<anonymous>'
+      const params = path.node.params.map(p => p.name || '<unknown>')
+      const parent = currentFunctionStack[currentFunctionStack.length - 1] || null
+
+      graph.functions[name] = { params, calls: [], parent }
+
+      currentFunctionStack.push(name)
+    },
+    ArrowFunctionExpression(path) {
+      const name = path.node.id?.name || '<arrow>'
+      const params = path.node.params.map(p => p.name || '<unknown>')
+      const parent = currentFunctionStack[currentFunctionStack.length - 1] || null
+
+      graph.functions[name] = { params, calls: [], parent }
+      currentFunctionStack.push(name)
+    },
+    CallExpression(path) {
+      const callee = path.node.callee.name || path.node.callee?.property?.name || '<unknown>'
+      const currentFn = currentFunctionStack[currentFunctionStack.length - 1]
+      if (currentFn) {
+        graph.functions[currentFn].calls.push(callee)
+      }
+      if (path.node.callee.name === 'require' && path.node.arguments.length) {
+        graph.requires.push(path.node.arguments[0].value)
+      }
+    },
+    ImportDeclaration(path) {
+      graph.imports.push(path.node.source.value)
+    },
+    VariableDeclarator(path) {
+      if (path.node.id.name) graph.variables.push(path.node.id.name)
+    },
+    FunctionDeclaration: {
+  exit(path) {
+    currentFunctionStack.pop()
+  }
+},
+ArrowFunctionExpression: {
+  exit(path) {
+    currentFunctionStack.pop()
+  }
+}
+  })
+
+  return graph
+}
+
+app.post('/process', async (req, res) => {
+  try {
+    const { bucket, objectName } = req.body
+    const buffer = await getFile(bucket, objectName)
+    const code = buffer.toString()
+
+    let analysis
+    try {
+      analysis = analyzeAST(code)
+    } catch (err) {
+      console.error('AST parse error:', err)
+      return res.status(500).json({ error: 'AST parse failed', details: err.message })
+    }
+
+    const resultName = objectName.replace(/\.[^.]+$/, '.json')
+
+    await minioClient.putObject(
+      OUT_BUCKET,
+      resultName,
+      JSON.stringify(analysis, null, 2),
+      { 'Content-Type': 'application/json' }
+    )
+
+    res.json({ processedFile: resultName })
+  } catch (err) {
+    console.error('Worker internal error:', err)
+    res.status(500).json({ error: 'Worker failed', details: err.message })
+  }
+})
+
+app.listen(4001, async () => {
+  await init()
+  console.log('Advanced JS AST worker running on 4001')
+})
+А тпепрь посмотри на это {
+  "functions": {},
+  "imports": [],
+  "requires": [
+    "express",
+    "minio",
+    "@babel/parser",
+    "@babel/traverse"
+  ],
+  "variables": [
+    "express",
+    "Minio",
+    "parser",
+    "traverse",
+    "app",
+    "minioClient",
+    "OUT_BUCKET",
+    "exists",
+    "stream",
+    "chunks",
+    "ast",
+    "graph",
+    "currentFunctionStack",
+    "name",
+    "params",
+    "parent",
+    "name",
+    "params",
+    "parent",
+    "callee",
+    "currentFn",
+    "buffer",
+    "code",
+    "analysis",
+    "resultName"
+  ]
+}
+Разве в коде сверху нет ни ожной функции
+
+Точно, воркер показывает пустой объект functions: {} потому что весь код, который анализируется, это сам воркер — а в нем нет функций в классическом смысле для FunctionDeclaration или ArrowFunctionExpression, которые парсер видит как декларации.
+
+Пояснения:
+
+const app = express() и app.use(...) — это вызовы, не функции декларации.
+
+async (req, res) => { ... } внутри app.post — это FunctionExpression, а не FunctionDeclaration или именованная ArrowFunctionExpression с id. Babel трактует стрелочные функции, присвоенные переменной (const f = () => {}) как ArrowFunctionExpression, но у них id = null.
+
+В текущем visitor вы не обрабатываете FunctionExpression, присвоенные переменным. Поэтому все обработчики проходят мимо этих функций.
+
+Исправление: добавить FunctionExpression и обработку стрелочных функций из переменных
+traverse(ast, {
+  FunctionDeclaration: {
+    enter(path) {
+      const name = path.node.id?.name || '<anonymous>'
+      const params = path.node.params.map(p => p.name || '<unknown>')
+      const parent = currentFunctionStack[currentFunctionStack.length - 1] || null
+      graph.functions[name] = { params, calls: [], parent }
+      currentFunctionStack.push(name)
+    },
+    exit(path) {
+      currentFunctionStack.pop()
+    }
+  },
+  FunctionExpression: {
+    enter(path) {
+      let name = '<anonymous>'
+      if (path.parent.type === 'VariableDeclarator' && path.parent.id.name) {
+        name = path.parent.id.name
+      }
+      const params = path.node.params.map(p => p.name || '<unknown>')
+      const parent = currentFunctionStack[currentFunctionStack.length - 1] || null
+      graph.functions[name] = { params, calls: [], parent }
+      currentFunctionStack.push(name)
+    },
+    exit(path) {
+      currentFunctionStack.pop()
+    }
+  },
+  ArrowFunctionExpression: {
+    enter(path) {
+      let name = '<arrow>'
+      if (path.parent.type === 'VariableDeclarator' && path.parent.id.name) {
+        name = path.parent.id.name
+      }
+      const params = path.node.params.map(p => p.name || '<unknown>')
+      const parent = currentFunctionStack[currentFunctionStack.length - 1] || null
+      graph.functions[name] = { params, calls: [], parent }
+      currentFunctionStack.push(name)
+    },
+    exit(path) {
+      currentFunctionStack.pop()
+    }
+  },
+  CallExpression(path) {
+    const callee = path.node.callee.name || path.node.callee?.property?.name || '<unknown>'
+    const currentFn = currentFunctionStack[currentFunctionStack.length - 1]
+    if (currentFn) graph.functions[currentFn].calls.push(callee)
+    if (path.node.callee.name === 'require' && path.node.arguments.length) {
+      graph.requires.push(path.node.arguments[0].value)
+    }
+  },
+  ImportDeclaration(path) {
+    graph.imports.push(path.node.source.value)
+  },
+  VariableDeclarator(path) {
+    if (path.node.id.name) graph.variables.push(path.node.id.name)
+  }
+})
+Теперь при анализе кода вроде:
+
+const f = () => {}
+const g = function(x) {}
+function h() {}
+JSON будет:
+
+"functions": {
+  "f": { "params": [], "calls": [], "parent": null },
+  "g": { "params": ["x"], "calls": [], "parent": null },
+  "h": { "params": [], "calls": [], "parent": null }
+}
+То есть все функции — именованные, а анонимные в переменных тоже учитываются.
+
+Если хочешь, могу прислать полностью исправленный воркер с поддержкой FunctionExpression и ArrowFunctionExpression, присвоенных переменным, чтобы functions больше не оставался пустым.
+
+
+
+========================================
+АКТУАЛЬНЫЙ СЦЕНАРИЙ ТЕСТИРОВАНИЯ BACKEND_NEW
+========================================
+
+Ниже описан полный путь, как вручную протестировать текущую реализацию в папке `backend_new` от нуля до `upload`.
+
+Что должно быть установлено
+
+- Node.js и npm
+- Docker Desktop
+- PowerShell
+
+Текущая архитектура
+
+- MinIO: хранит исходные и обработанные файлы
+- Manager service: принимает файл, считает hash, кладёт в `preprocessed`, создаёт job и отправляет задачу воркеру
+- JS/TS worker: читает файл из MinIO, делает AST-анализ, сохраняет JSON в `processed-files`
+
+Порты
+
+- MinIO API: `9000`
+- MinIO Console: `9001`
+- Manager: `3000`
+- JS worker: `4001`
+
+Используемые bucket
+
+- `preprocessed`
+- `processed-files`
+
+Важно
+
+- Bucket `processed_files` использовать нельзя, потому что символ `_` невалиден для S3/MinIO bucket name.
+- В актуальной версии проекта используется именно `processed-files`.
+
+1. Перейти в проект
+
+```powershell
+cd C:\Users\ermol\OneDrive\Desktop\Диплом\backend_new
+```
+
+2. Установить зависимости
+
+```powershell
+npm install
+```
+
+Проверка синтаксиса:
+
+```powershell
+npm run check
+```
+
+Ожидаемо: команда завершается без ошибок.
+
+3. Поднять MinIO
+
+```powershell
+docker compose up -d
+```
+
+Проверить контейнер:
+
+```powershell
+docker ps -a
+```
+
+Проверить health:
+
+```powershell
+curl.exe -I http://127.0.0.1:9000/minio/health/live
+```
+
+Ожидаемо: `HTTP/1.1 200 OK`
+
+4. Открыть MinIO Console
+
+В браузере:
+
+```text
+http://127.0.0.1:9001
+```
+
+Логин:
+
+```text
+admin
+```
+
+Пароль:
+
+```text
+strongpassword
+```
+
+После старта сервисов там должны появиться bucket:
+
+- `preprocessed`
+- `processed-files`
+
+5. Запустить manager service
+
+В первом окне PowerShell:
+
+```powershell
+cd C:\Users\ermol\OneDrive\Desktop\Диплом\backend_new
+node src/manager/app.js
+```
+
+Ожидаемый вывод:
+
+```text
+Manager service listening on 3000
+```
+
+Проверка health:
+
+```powershell
+curl.exe http://127.0.0.1:3000/api/health
+```
+
+Ожидаемый ответ:
+
+```json
+{"service":"manager","status":"ok"}
+```
+
+6. Запустить JS worker
+
+Во втором окне PowerShell:
+
+```powershell
+cd C:\Users\ermol\OneDrive\Desktop\Диплом\backend_new
+node src/workers/js/app.js
+```
+
+Ожидаемый вывод:
+
+```text
+JS/TS worker listening on 4001
+```
+
+Проверка health:
+
+```powershell
+curl.exe http://127.0.0.1:4001/health
+```
+
+Ожидаемый ответ:
+
+```json
+{"service":"worker-js-ts","status":"ok"}
+```
+
+7. Подготовить тестовый файл
+
+Можно создать простой JS-файл:
+
+```powershell
+@'
+function outer(a) {
+  const helper = (b) => b + 1
+  return helper(a)
+}
+
+module.exports = { outer }
+'@ | Set-Content -Encoding UTF8 .\sample.js
+```
+
+8. Отправить файл через upload
+
+```powershell
+curl.exe -X POST -F "file=@C:\Users\ermol\OneDrive\Desktop\Диплом\backend_new\sample.js" http://127.0.0.1:3000/api/upload
+```
+
+Ожидаемый ответ примерно такой:
+
+```json
+{
+  "jobId": "some-uuid",
+  "hash": "61795ea517728d4029be309b3b68e1c342e0346a21d31bd4a6452714eb9108b7",
+  "language": "javascript",
+  "originalName": "sample.js",
+  "sourceObjectKey": "61795ea517728d4029be309b3b68e1c342e0346a21d31bd4a6452714eb9108b7.js",
+  "resultObjectKey": "61795ea517728d4029be309b3b68e1c342e0346a21d31bd4a6452714eb9108b7.json",
+  "status": "COMPLETED",
+  "worker": "worker-js-ts",
+  "uploaded": true,
+  "analysisSummary": {
+    "functions": 2,
+    "imports": 0,
+    "requires": 0,
+    "variables": 1,
+    "callEdges": 1
+  }
+}
+```
+
+Что означает `uploaded`
+
+- `true`: исходный файл впервые записан в `preprocessed`
+- `false`: файл с таким hash уже есть, сработала дедупликация
+
+9. Проверить job по id
+
+Подставить свой `jobId`:
+
+```powershell
+curl.exe http://127.0.0.1:3000/api/jobs/JOB_ID
+```
+
+Ожидаемо:
+
+- `status` будет `COMPLETED`
+- появится `resultObjectKey`
+- появится `analysisSummary`
+
+Посмотреть все jobs:
+
+```powershell
+curl.exe http://127.0.0.1:3000/api/jobs
+```
+
+Важно:
+
+- Если запрашивать `/api/jobs` параллельно с `upload`, можно поймать промежуточный статус `DISPATCHED`.
+- Это нормально, потому что обработка идёт асинхронно.
+- После завершения job по `/api/jobs/{id}` будет `COMPLETED`.
+
+10. Проверить MinIO после upload
+
+Открыть MinIO Console и убедиться, что:
+
+- в `preprocessed` лежит исходный файл с именем вида `hash.js`
+- в `processed-files` лежит результат с именем вида `hash.json`
+
+11. Проверить дедупликацию
+
+Повторно отправить тот же файл:
+
+```powershell
+curl.exe -X POST -F "file=@C:\Users\ermol\OneDrive\Desktop\Диплом\backend_new\sample.js" http://127.0.0.1:3000/api/upload
+```
+
+Ожидаемо:
+
+- `uploaded` станет `false`
+- `hash` останется тем же
+- `sourceObjectKey` останется тем же
+- результат снова будет обработан воркером
+
+12. Что именно сейчас анализирует worker
+
+Текущий JS/TS worker извлекает:
+
+- функции
+- вложенные функции
+- параметры функций
+- вызовы функций
+- `import`
+- `require`
+- переменные
+- граф вызовов
+- parser diagnostics
+
+13. Как выглядит минимальный успешный путь
+
+```text
+Файл -> /api/upload -> Manager -> bucket preprocessed -> Worker -> bucket processed-files -> COMPLETED
+```
+
+14. Типовые проблемы
+
+MinIO не поднят
+
+Симптом:
+
+```text
+connect ECONNREFUSED 127.0.0.1:9000
+```
+
+Что делать:
+
+```powershell
+docker compose up -d
+curl.exe -I http://127.0.0.1:9000/minio/health/live
+```
+
+Невалидный bucket name
+
+Симптом:
+
+```text
+InvalidBucketNameError
+```
+
+Причина:
+
+- в имени bucket нельзя использовать `_`
+
+Правильно:
+
+- `processed-files`
+
+Неправильно:
+
+- `processed_files`
+
+Manager не запущен
+
+Симптом:
+
+```text
+curl: (7) Failed to connect to 127.0.0.1 port 3000
+```
+
+Что делать:
+
+```powershell
+node src/manager/app.js
+```
+
+Worker не запущен
+
+Симптом:
+
+- upload возвращает ошибку воркера
+- job может перейти в `FAILED`
+
+Что делать:
+
+```powershell
+node src/workers/js/app.js
+```
+
+PowerShell вызывает не тот curl
+
+Если обычный `curl` ведёт себя странно, использовать именно:
+
+```powershell
+curl.exe
+```
+
+15. Как останавливать
+
+Остановить manager и worker:
+
+- в окнах, где они запущены, нажать `Ctrl+C`
+
+Остановить MinIO:
+
+```powershell
+docker compose down
+```
+
+Если нужно остановить с удалением volumes:
+
+```powershell
+docker compose down -v
+```
+
+16. Самый короткий сценарий проверки
+
+```powershell
+cd C:\Users\ermol\OneDrive\Desktop\Диплом\backend_new
+npm install
+docker compose up -d
+node src/manager/app.js
+```
+
+Во втором окне:
+
+```powershell
+cd C:\Users\ermol\OneDrive\Desktop\Диплом\backend_new
+node src/workers/js/app.js
+```
+
+В третьем окне:
+
+```powershell
+@'
+function outer(a) {
+  const helper = (b) => b + 1
+  return helper(a)
+}
+module.exports = { outer }
+'@ | Set-Content -Encoding UTF8 .\sample.js
+
+curl.exe -X POST -F "file=@C:\Users\ermol\OneDrive\Desktop\Диплом\backend_new\sample.js" http://127.0.0.1:3000/api/upload
+```
+
+Если в ответ пришёл `status: COMPLETED`, значит текущая цепочка работает правильно.

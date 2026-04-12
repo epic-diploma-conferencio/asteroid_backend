@@ -1,0 +1,450 @@
+openapi: 3.0.3
+info:
+  title: API платформы анализа архитектуры
+  version: 1.0.0
+  description: |
+    API менеджера для загрузки исходных файлов, отслеживания задач анализа и
+    получения единого графа проекта для визуализации на фронтенде.
+
+    Рекомендуемый сценарий для фронтенда:
+    1. Загрузить файл через POST /upload
+    2. Опросом проверять GET /jobs/{jobId}, пока статус не станет COMPLETED
+    3. Загрузить единый граф через GET /graph
+servers:
+  - url: http://127.0.0.1:3000/api
+    description: Локальный API менеджера
+tags:
+  - name: здоровье
+  - name: загрузки
+  - name: задачи
+  - name: граф
+  - name: воркеры
+paths:
+  /health:
+    get:
+      tags: [здоровье]
+      summary: Проверка работоспособности менеджера
+      responses:
+        '200':
+          description: Менеджер работает
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /workers:
+    get:
+      tags: [воркеры]
+      summary: Список настроенных воркеров
+      responses:
+        '200':
+          description: Список воркеров
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkerDefinition'
+
+  /jobs:
+    get:
+      tags: [задачи]
+      summary: Список всех загруженных задач
+      responses:
+        '200':
+          description: Список задач
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobRecord'
+
+  /jobs/{jobId}:
+    get:
+      tags: [задачи]
+      summary: Получить задачу по идентификатору
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: Идентификатор задачи, возвращаемый POST /upload
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Задача найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRecord'
+        '404':
+          description: Задача не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /upload:
+    post:
+      tags: [загрузки]
+      summary: Загрузить исходный файл для анализа
+      description: |
+        Загружает один исходный файл в формате multipart/form-data.
+        Имя поля формы должно быть строго `file`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Файл исходного кода (.js, .ts, .py, ...)
+      responses:
+        '202':
+          description: Файл принят и обработан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRecord'
+              examples:
+                completed:
+                  value:
+                    jobId: bfad2abf-2eb3-4ec5-8c25-5a0c8ce2aca0
+                    hash: e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef
+                    language: typescript
+                    originalName: bridge-feature.ts
+                    mimeType: application/octet-stream
+                    size: 185
+                    sourceObjectKey: e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
+                    resultObjectKey: e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.json
+                    status: COMPLETED
+                    createdAt: '2026-04-04T18:16:56.156Z'
+                    updatedAt: '2026-04-04T18:16:56.215Z'
+                    worker: worker-typescript
+                    uploaded: true
+                    analysisSummary:
+                      modules: 1
+                      entities: 3
+                      relations: 5
+                      imports: 1
+                      calls: 2
+                      diagnostics: 0
+                    error: null
+        '400':
+          description: Некорректный multipart payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Непредвиденная ошибка менеджера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Ошибка запроса к воркеру
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRecord'
+
+  /graph:
+    get:
+      tags: [граф]
+      summary: Получить единый граф проекта
+      description: |
+        Основная точка для отрисовки графа на фронтенде.
+        Возвращает единый нормализованный граф, собранный из всех обработанных файлов.
+      responses:
+        '200':
+          description: Единый граф
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphResponse'
+              examples:
+                graph:
+                  value:
+                    nodes:
+                      - id: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
+                        kind: module
+                        name: bridge-feature.ts
+                        parentId: null
+                        moduleId: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
+                        data:
+                          path: bridge-feature.ts
+                          hash: e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef
+                      - id: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts:function:bridgeLabel
+                        kind: function
+                        name: bridgeLabel
+                        parentId: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
+                        moduleId: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
+                        data:
+                          params: [user]
+                          runtimeKind: FunctionDeclaration
+                    edges:
+                      - id: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts->module:20685d4385f5299d6a4effc01ae9e4434b97e8d0743c98a7d3d0e0956676e4b0.js:module-import
+                        from: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
+                        to: module:20685d4385f5299d6a4effc01ae9e4434b97e8d0743c98a7d3d0e0956676e4b0.js
+                        kind: module-import
+                        data:
+                          specifier: ./bridge-helper.js
+                      - id: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts->module:20685d4385f5299d6a4effc01ae9e4434b97e8d0743c98a7d3d0e0956676e4b0.js:function:bridgeHelper:symbol-import:bridgeHelper
+                        from: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
+                        to: module:20685d4385f5299d6a4effc01ae9e4434b97e8d0743c98a7d3d0e0956676e4b0.js:function:bridgeHelper
+                        kind: symbol-import
+                        data:
+                          specifier: ./bridge-helper.js
+                          imported: bridgeHelper
+                          local: bridgeHelper
+                          importKind: named
+                    modules:
+                      - id: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
+                        name: bridge-feature.ts
+                        path: bridge-feature.ts
+                        hash: e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef
+                        language: typescript
+        '500':
+          description: Ошибка построения графа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [service, status, time]
+      properties:
+        service:
+          type: string
+          example: менеджер
+        status:
+          type: string
+          example: работает
+        time:
+          type: string
+          format: date-time
+
+    WorkerDefinition:
+      type: object
+      required: [language, workerName]
+      properties:
+        language:
+          type: string
+          example: typescript
+        workerName:
+          type: string
+          example: worker-typescript
+        endpoint:
+          type: string
+          nullable: true
+          example: http://127.0.0.1:4002/process
+
+    JobStatus:
+      type: string
+      enum:
+        - RECEIVED
+        - STORED
+        - DISPATCHED
+        - PROCESSING
+        - COMPLETED
+        - FAILED
+        - UNSUPPORTED
+
+    AnalysisSummary:
+      type: object
+      nullable: true
+      properties:
+        modules:
+          type: integer
+          example: 1
+        entities:
+          type: integer
+          example: 3
+        relations:
+          type: integer
+          example: 5
+        imports:
+          type: integer
+          example: 1
+        calls:
+          type: integer
+          example: 2
+        diagnostics:
+          type: integer
+          example: 0
+
+    ErrorObject:
+      nullable: true
+      oneOf:
+        - type: 'null'
+        - type: object
+          properties:
+            code:
+              type: string
+              example: WORKER_REQUEST_FAILED
+            message:
+              type: string
+              example: connect ECONNREFUSED 127.0.0.1:4002
+
+    JobRecord:
+      type: object
+      required:
+        - jobId
+        - hash
+        - language
+        - originalName
+        - mimeType
+        - size
+        - sourceObjectKey
+        - status
+        - createdAt
+        - updatedAt
+        - uploaded
+      properties:
+        jobId:
+          type: string
+        hash:
+          type: string
+        language:
+          type: string
+          nullable: true
+          example: typescript
+        originalName:
+          type: string
+          example: bridge-feature.ts
+        mimeType:
+          type: string
+          example: application/octet-stream
+        size:
+          type: integer
+          example: 185
+        sourceObjectKey:
+          type: string
+        resultObjectKey:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        worker:
+          type: string
+          nullable: true
+        uploaded:
+          type: boolean
+        analysisSummary:
+          $ref: '#/components/schemas/AnalysisSummary'
+        error:
+          $ref: '#/components/schemas/ErrorObject'
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Задача не найдена
+        code:
+          type: string
+          nullable: true
+          example: LIMIT_UNEXPECTED_FILE
+
+    GraphModule:
+      type: object
+      required: [id, name, path, hash, language]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        path:
+          type: string
+        hash:
+          type: string
+          nullable: true
+        language:
+          type: string
+          example: typescript
+
+    GraphNode:
+      type: object
+      required: [id, kind, name]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum:
+            - module
+            - function
+            - class
+            - interface
+            - type
+            - enum
+            - variable
+            - external
+            - call
+        name:
+          type: string
+        parentId:
+          type: string
+          nullable: true
+        moduleId:
+          type: string
+          nullable: true
+        data:
+          type: object
+          additionalProperties: true
+
+    GraphEdge:
+      type: object
+      required: [id, from, to, kind]
+      properties:
+        id:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        kind:
+          type: string
+          enum:
+            - contains
+            - imports
+            - module-import
+            - symbol-import
+            - calls
+            - cross-module-call
+        data:
+          type: object
+          additionalProperties: true
+
+    GraphResponse:
+      type: object
+      required: [nodes, edges, modules]
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphEdge'
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphModule'

@@ -1,0 +1,21 @@
+{
+  "name": "architecture-analysis-platform",
+  "version": "1.0.0",
+  "description": "Diploma-ready backend scaffold for architectural code analysis with manager service and worker orchestra.",
+  "main": "src/manager/app.js",
+  "scripts": {
+    "start:manager": "node src/manager/app.js",
+    "start:worker:js": "node src/workers/js/app.js",
+    "start:worker:ts": "node src/workers/typescript/app.js",
+    "start:worker:py": "python src/workers/python/app.py",
+    "check": "node --check src/manager/app.js && node --check src/workers/js/app.js && node --check src/workers/js/analyzer.js && node --check src/workers/typescript/app.js && node --check src/workers/typescript/analyzer.js && python -m py_compile src/workers/python/app.py src/workers/python/analyzer.py"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.29.2",
+    "@babel/traverse": "^7.29.0",
+    "axios": "^1.14.0",
+    "express": "^5.2.1",
+    "minio": "^8.0.7",
+    "multer": "^2.1.1"
+  }
+}

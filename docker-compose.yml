@@ -1,0 +1,112 @@
+version: "3.9"
+
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: strongpassword
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_SCRIPT: src/manager/app.js
+    depends_on:
+      minio:
+        condition: service_healthy
+      worker-js:
+        condition: service_started
+      worker-ts:
+        condition: service_started
+      worker-py:
+        condition: service_started
+    environment:
+      PORT: 3000
+      MANAGER_PUBLIC_URL: http://manager:3000
+      WORKER_JS_URL: http://worker-js:4001
+      WORKER_TS_URL: http://worker-ts:4002
+      WORKER_PY_URL: http://worker-py:4003
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: strongpassword
+      MINIO_SOURCE_BUCKET: preprocessed
+      MINIO_RESULT_BUCKET: processed-files
+    ports:
+      - "3000:3000"
+
+  worker-js:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_SCRIPT: src/workers/js/app.js
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: strongpassword
+      MINIO_SOURCE_BUCKET: preprocessed
+      MINIO_RESULT_BUCKET: processed-files
+    ports:
+      - "4001:4001"
+
+  worker-ts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_SCRIPT: src/workers/typescript/app.js
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: strongpassword
+      MINIO_SOURCE_BUCKET: preprocessed
+      MINIO_RESULT_BUCKET: processed-files
+    ports:
+      - "4002:4002"
+
+  worker-py:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: strongpassword
+      MINIO_SOURCE_BUCKET: preprocessed
+      MINIO_RESULT_BUCKET: processed-files
+      WORKER_PY_PORT: 4003
+    ports:
+      - "4003:4003"
+
+volumes:
+  minio-data:
