@@ -3,14 +3,19 @@ const path = require('path')
 const multer = require('multer')
 const config = require('../shared/config')
 const { aggregateAnalyses, loadCompletedAnalyses } = require('./graph-service')
+const { createAuthRouter } = require('./auth-routes')
 
-function createRouter({ jobService, jobStore }) {
+function createRouter({ jobService, jobStore, authService }) {
   const router = express.Router()
   const upload = multer({
     limits: {
       fileSize: config.upload.maxFileSizeBytes
     }
   })
+
+  if (authService) {
+    router.use('/v1/auth', createAuthRouter({ authService }))
+  }
 
   router.get('/health', (req, res) => {
     res.json({
