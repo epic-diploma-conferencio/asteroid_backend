@@ -61,7 +61,11 @@ function createRouter({ jobService, jobStore, authService, researchService }) {
       const user = getUserFromRequest(req)
       const job = await jobService.submitFile(req.file)
       if (job.status !== 'COMPLETED') {
-        return res.status(502).json({ error: 'Unable to complete upload processing.' })
+        return res.status(502).json({
+          error: job.error?.message || 'Unable to complete upload processing.',
+          code: job.error?.code || null,
+          status: job.status
+        })
       }
 
       const session = await researchService.createSessionFromJob({
