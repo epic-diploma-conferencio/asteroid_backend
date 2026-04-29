@@ -3,6 +3,7 @@ const path = require('path')
 const multer = require('multer')
 const config = require('../shared/config')
 const { aggregateAnalyses, loadCompletedAnalyses } = require('./graph-service')
+const { readObjectAsBuffer } = require('../shared/minio')
 const { createAuthRouter } = require('./auth-routes')
 const { getUserFromRequest } = require('./auth-utils')
 
@@ -52,35 +53,88 @@ function createRouter({ jobService, jobStore, authService, researchService }) {
     }
   })
 
-  router.post('/upload', upload.single('file'), async (req, res) => {
+  router.post('/upload', upload.any(), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'File payload is required in field "file".' })
+      const inputFiles = Array.isArray(req.files) && req.files.length
+        ? req.files
+        : req.file
+          ? [req.file]
+          : []
+
+      if (!inputFiles.length) {
+        return res.status(400).json({ error: 'File payload is required in field "file" or "files".' })
       }
 
       const user = getUserFromRequest(req)
-      const job = await jobService.submitFile(req.file)
-      if (job.status !== 'COMPLETED') {
+      const jobs = await Promise.all(inputFiles.map(file => jobService.submitFile(file)))
+      const completedJobs = jobs.filter(job => job.status === 'COMPLETED')
+      const failedJobs = jobs.filter(job => job.status !== 'COMPLETED')
+
+      if (!completedJobs.length) {
+        const firstFailed = failedJobs[0]
         return res.status(502).json({
-          error: job.error?.message || 'Unable to complete upload processing.',
-          code: job.error?.code || null,
-          status: job.status
+          error: firstFailed?.error?.message || 'Unable to complete upload processing.',
+          code: firstFailed?.error?.code || null,
+          status: firstFailed?.status || 'FAILED',
+          failedFiles: failedJobs.map(job => ({
+            jobId: job.jobId,
+            originalName: job.originalName,
+            status: job.status,
+            code: job.error?.code || null,
+            error: job.error?.message || null
+          }))
         })
       }
 
+      const analyses = []
+      for (const job of completedJobs) {
+        if (!job.resultObjectKey) continue
+        const buffer = await readObjectAsBuffer(config.minio.resultBucket, job.resultObjectKey)
+        const payload = JSON.parse(buffer.toString('utf8'))
+        if (payload.analysis) {
+          analyses.push(payload.analysis)
+        }
+      }
+
+      const stitchedAnalysis = {
+        formatVersion: '1.0',
+        generatedAt: new Date().toISOString(),
+        files: completedJobs.map(job => ({
+          jobId: job.jobId,
+          originalName: job.originalName,
+          language: job.language,
+          sourceObjectKey: job.sourceObjectKey,
+          resultObjectKey: job.resultObjectKey
+        })),
+        analyses,
+        graph: aggregateAnalyses(analyses)
+      }
+
+      const primaryJob = completedJobs[0]
       const session = await researchService.createSessionFromJob({
-        job,
-        sourceName: req.file.originalname,
-        fileCount: 1,
+        job: primaryJob,
+        sourceName: inputFiles.length === 1 ? inputFiles[0].originalname : `${inputFiles.length} files`,
+        fileCount: completedJobs.length,
         userId: user?.id || null
       })
 
       return res.status(200).json({
-        message: 'Upload completed and session created.',
+        message: failedJobs.length
+          ? 'Upload partially completed and session created.'
+          : 'Upload completed and session created.',
         archiveId: session.sessionId,
         archiveName: session.archiveName,
         fileCount: session.fileCount,
-        language: session.language
+        language: session.language,
+        completedFiles: completedJobs.length,
+        failedFiles: failedJobs.map(job => ({
+          jobId: job.jobId,
+          originalName: job.originalName,
+          status: job.status,
+          code: job.error?.code || null,
+          error: job.error?.message || null
+        })),
+        stitchedAnalysis
       })
     } catch (error) {
       if (error.name === 'MulterError') {

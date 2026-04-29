@@ -94,15 +94,15 @@ function buildCards(ruleResults) {
       kind: kindByGroup[index % kindByGroup.length],
       title: result.ruleRussian,
       stat: {
-        label: 'Оценка',
+        label: 'РћС†РµРЅРєР°',
         value: `${result.score}/100`,
         tone: statusTone(result.score)
       },
       preview: result.status === 'passed'
-        ? 'Критерий пройден, критичных сигналов не найдено.'
+        ? 'РљСЂРёС‚РµСЂРёР№ РїСЂРѕР№РґРµРЅ, РєСЂРёС‚РёС‡РЅС‹С… СЃРёРіРЅР°Р»РѕРІ РЅРµ РЅР°Р№РґРµРЅРѕ.'
         : result.status === 'warning'
-          ? 'Есть предупреждения, стоит проверить отмеченные зоны.'
-          : 'Найдены значимые риски, требуется дополнительный разбор.',
+          ? 'Р•СЃС‚СЊ РїСЂРµРґСѓРїСЂРµР¶РґРµРЅРёСЏ, СЃС‚РѕРёС‚ РїСЂРѕРІРµСЂРёС‚СЊ РѕС‚РјРµС‡РµРЅРЅС‹Рµ Р·РѕРЅС‹.'
+          : 'РќР°Р№РґРµРЅС‹ Р·РЅР°С‡РёРјС‹Рµ СЂРёСЃРєРё, С‚СЂРµР±СѓРµС‚СЃСЏ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Р№ СЂР°Р·Р±РѕСЂ.',
       files: []
     }
   })
@@ -217,7 +217,7 @@ class ResearchService {
 
     const researchId = createUuid()
     const cards = buildCards(ruleResults)
-    const preview = `Проверено правил: ${ruleResults.length}. Стиль: ${appliedStyle}.`
+    const preview = `РџСЂРѕРІРµСЂРµРЅРѕ РїСЂР°РІРёР»: ${ruleResults.length}. РЎС‚РёР»СЊ: ${appliedStyle}.`
 
     await this.pool.query(
       `
@@ -231,7 +231,7 @@ class ResearchService {
         researchId,
         userId || session.user_id || null,
         session.session_id,
-        `Исследование ${new Date().toLocaleString('ru-RU')}`,
+        `РСЃСЃР»РµРґРѕРІР°РЅРёРµ ${new Date().toLocaleString('ru-RU')}`,
         null,
         session.language,
         preview,
