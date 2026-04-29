@@ -1,32 +1,90 @@
 openapi: 3.0.3
 info:
-  title: API платформы анализа архитектуры
-  version: 1.0.0
+  title: Architecture Analysis Platform API
+  version: 1.1.0
   description: |
-    API менеджера для загрузки исходных файлов, отслеживания задач анализа и
-    получения единого графа проекта для визуализации на фронтенде.
+    API for frontend integration with the manager service.
+    Includes file analysis flow and user registration.
 
-    Рекомендуемый сценарий для фронтенда:
-    1. Загрузить файл через POST /upload
-    2. Опросом проверять GET /jobs/{jobId}, пока статус не станет COMPLETED
-    3. Загрузить единый граф через GET /graph
+    Recommended frontend flow:
+    1. Register user via POST /v1/auth/register (optional for now, if auth is enabled in UI).
+    2. Upload source file via POST /upload.
+    3. Poll GET /jobs/{jobId} until status becomes COMPLETED or FAILED.
+    4. Fetch final aggregated graph via GET /graph.
 servers:
   - url: http://127.0.0.1:3000/api
-    description: Локальный API менеджера
+    description: Local manager API
 tags:
-  - name: здоровье
-  - name: загрузки
-  - name: задачи
-  - name: граф
-  - name: воркеры
+  - name: Auth
+  - name: Health
+  - name: Upload
+  - name: Jobs
+  - name: Graph
+  - name: Workers
 paths:
-  /health:
-    get:
-      tags: [здоровье]
-      summary: Проверка работоспособности менеджера
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a user
+      description: |
+        Creates a new user, returns access token in response body
+        and refresh token in HttpOnly cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRegisterRequest'
       responses:
         '200':
-          description: Менеджер работает
+          description: User successfully registered
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh token cookie (`refreshToken`)
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+              examples:
+                success:
+                  value:
+                    accessToken: eyJhbGciOiJIUzI1NiJ9...
+                    expiresIn: 900
+                    user:
+                      login: ivan.petrov
+                      firstName: Ivan
+                      lastName: Petrov
+                      avatarUrl: https://cdn.example.com/avatars/ivan.petrov/default.webp
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageErrorResponse'
+              examples:
+                shortPassword:
+                  value:
+                    message: Field "password" must be between 8 and 72 characters.
+        '409':
+          description: User with this login already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageErrorResponse'
+              examples:
+                duplicateLogin:
+                  value:
+                    message: User with this login already exists.
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Manager health check
+      responses:
+        '200':
+          description: Service is healthy
           content:
             application/json:
               schema:
@@ -34,11 +92,11 @@ paths:
 
   /workers:
     get:
-      tags: [воркеры]
-      summary: Список настроенных воркеров
+      tags: [Workers]
+      summary: List configured workers
       responses:
         '200':
-          description: Список воркеров
+          description: Worker list
           content:
             application/json:
               schema:
@@ -46,13 +104,56 @@ paths:
                 items:
                   $ref: '#/components/schemas/WorkerDefinition'
 
+  /upload:
+    post:
+      tags: [Upload]
+      summary: Upload a source file for analysis
+      description: Multipart upload with a required `file` field.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Source code file (.js, .ts, .py, ...)
+      responses:
+        '202':
+          description: File accepted and processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRecord'
+        '400':
+          description: Invalid multipart payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal manager error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Worker request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRecord'
+
   /jobs:
     get:
-      tags: [задачи]
-      summary: Список всех загруженных задач
+      tags: [Jobs]
+      summary: List all submitted jobs
       responses:
         '200':
-          description: Список задач
+          description: Jobs list
           content:
             application/json:
               schema:
@@ -62,157 +163,45 @@ paths:
 
   /jobs/{jobId}:
     get:
-      tags: [задачи]
-      summary: Получить задачу по идентификатору
+      tags: [Jobs]
+      summary: Get a job by jobId
       parameters:
         - name: jobId
           in: path
           required: true
-          description: Идентификатор задачи, возвращаемый POST /upload
+          description: Job identifier returned by POST /upload
           schema:
             type: string
       responses:
         '200':
-          description: Задача найдена
+          description: Job found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobRecord'
         '404':
-          description: Задача не найдена
+          description: Job not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-  /upload:
-    post:
-      tags: [загрузки]
-      summary: Загрузить исходный файл для анализа
-      description: |
-        Загружает один исходный файл в формате multipart/form-data.
-        Имя поля формы должно быть строго `file`.
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: Файл исходного кода (.js, .ts, .py, ...)
-      responses:
-        '202':
-          description: Файл принят и обработан
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JobRecord'
-              examples:
-                completed:
-                  value:
-                    jobId: bfad2abf-2eb3-4ec5-8c25-5a0c8ce2aca0
-                    hash: e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef
-                    language: typescript
-                    originalName: bridge-feature.ts
-                    mimeType: application/octet-stream
-                    size: 185
-                    sourceObjectKey: e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
-                    resultObjectKey: e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.json
-                    status: COMPLETED
-                    createdAt: '2026-04-04T18:16:56.156Z'
-                    updatedAt: '2026-04-04T18:16:56.215Z'
-                    worker: worker-typescript
-                    uploaded: true
-                    analysisSummary:
-                      modules: 1
-                      entities: 3
-                      relations: 5
-                      imports: 1
-                      calls: 2
-                      diagnostics: 0
-                    error: null
-        '400':
-          description: Некорректный multipart payload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Непредвиденная ошибка менеджера
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '502':
-          description: Ошибка запроса к воркеру
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/JobRecord'
 
   /graph:
     get:
-      tags: [граф]
-      summary: Получить единый граф проекта
+      tags: [Graph]
+      summary: Get aggregated architecture graph
       description: |
-        Основная точка для отрисовки графа на фронтенде.
-        Возвращает единый нормализованный граф, собранный из всех обработанных файлов.
+        Main endpoint for frontend graph rendering.
+        Returns normalized graph merged from completed analyses.
       responses:
         '200':
-          description: Единый граф
+          description: Graph response
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GraphResponse'
-              examples:
-                graph:
-                  value:
-                    nodes:
-                      - id: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
-                        kind: module
-                        name: bridge-feature.ts
-                        parentId: null
-                        moduleId: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
-                        data:
-                          path: bridge-feature.ts
-                          hash: e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef
-                      - id: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts:function:bridgeLabel
-                        kind: function
-                        name: bridgeLabel
-                        parentId: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
-                        moduleId: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
-                        data:
-                          params: [user]
-                          runtimeKind: FunctionDeclaration
-                    edges:
-                      - id: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts->module:20685d4385f5299d6a4effc01ae9e4434b97e8d0743c98a7d3d0e0956676e4b0.js:module-import
-                        from: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
-                        to: module:20685d4385f5299d6a4effc01ae9e4434b97e8d0743c98a7d3d0e0956676e4b0.js
-                        kind: module-import
-                        data:
-                          specifier: ./bridge-helper.js
-                      - id: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts->module:20685d4385f5299d6a4effc01ae9e4434b97e8d0743c98a7d3d0e0956676e4b0.js:function:bridgeHelper:symbol-import:bridgeHelper
-                        from: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
-                        to: module:20685d4385f5299d6a4effc01ae9e4434b97e8d0743c98a7d3d0e0956676e4b0.js:function:bridgeHelper
-                        kind: symbol-import
-                        data:
-                          specifier: ./bridge-helper.js
-                          imported: bridgeHelper
-                          local: bridgeHelper
-                          importKind: named
-                    modules:
-                      - id: module:e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef.ts
-                        name: bridge-feature.ts
-                        path: bridge-feature.ts
-                        hash: e9fb50ff62680d7fcaff07b8d2b119f981d35aef688d0825fe41034c5d0e1bef
-                        language: typescript
         '500':
-          description: Ошибка построения графа
+          description: Graph aggregation error
           content:
             application/json:
               schema:
@@ -220,16 +209,78 @@ paths:
 
 components:
   schemas:
+    AuthRegisterRequest:
+      type: object
+      required: [login, password, firstName, lastName]
+      properties:
+        login:
+          type: string
+          minLength: 3
+          maxLength: 32
+          example: ivan.petrov
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          example: Sup3rStrong!
+        firstName:
+          type: string
+          maxLength: 60
+          example: Ivan
+        lastName:
+          type: string
+          maxLength: 60
+          example: Petrov
+
+    PublicUser:
+      type: object
+      required: [login, firstName, lastName, avatarUrl]
+      properties:
+        login:
+          type: string
+          example: ivan.petrov
+        firstName:
+          type: string
+          example: Ivan
+        lastName:
+          type: string
+          example: Petrov
+        avatarUrl:
+          type: string
+          format: uri
+          example: https://cdn.example.com/avatars/ivan.petrov/default.webp
+
+    AuthTokensResponse:
+      type: object
+      required: [accessToken, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiJ9...
+        expiresIn:
+          type: integer
+          example: 900
+          description: Access token lifetime in seconds
+        user:
+          $ref: '#/components/schemas/PublicUser'
+
+    MessageErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
     HealthResponse:
       type: object
       required: [service, status, time]
       properties:
         service:
           type: string
-          example: менеджер
+          example: manager
         status:
           type: string
-          example: работает
+          example: ok
         time:
           type: string
           format: date-time
@@ -313,6 +364,7 @@ components:
       properties:
         jobId:
           type: string
+          example: bfad2abf-2eb3-4ec5-8c25-5a0c8ce2aca0
         hash:
           type: string
         language:
@@ -356,11 +408,9 @@ components:
       properties:
         error:
           type: string
-          example: Задача не найдена
         code:
           type: string
           nullable: true
-          example: LIMIT_UNEXPECTED_FILE
 
     GraphModule:
       type: object
@@ -387,16 +437,7 @@ components:
           type: string
         kind:
           type: string
-          enum:
-            - module
-            - function
-            - class
-            - interface
-            - type
-            - enum
-            - variable
-            - external
-            - call
+          enum: [module, function, class, interface, type, enum, variable, external, call]
         name:
           type: string
         parentId:
@@ -421,13 +462,7 @@ components:
           type: string
         kind:
           type: string
-          enum:
-            - contains
-            - imports
-            - module-import
-            - symbol-import
-            - calls
-            - cross-module-call
+          enum: [contains, imports, module-import, symbol-import, calls, cross-module-call]
         data:
           type: object
           additionalProperties: true

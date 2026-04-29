@@ -30,5 +30,23 @@ module.exports = {
   },
   upload: {
     maxFileSizeBytes: getNumber(process.env.MAX_FILE_SIZE_BYTES, 10 * 1024 * 1024)
+  },
+  postgres: {
+    host: process.env.POSTGRES_HOST || '127.0.0.1',
+    port: getNumber(process.env.POSTGRES_PORT, 5432),
+    database: process.env.POSTGRES_DB || 'diploma',
+    user: process.env.POSTGRES_USER || 'postgres',
+    password: process.env.POSTGRES_PASSWORD || 'postgres',
+    maxPoolSize: getNumber(process.env.POSTGRES_MAX_POOL_SIZE, 10)
+  },
+  auth: {
+    jwtAccessSecret: process.env.JWT_ACCESS_SECRET || 'change-me-access-secret',
+    jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'change-me-refresh-secret',
+    accessTokenTtlSeconds: getNumber(process.env.JWT_ACCESS_TTL_SECONDS, 900),
+    refreshTokenTtlSeconds: getNumber(process.env.JWT_REFRESH_TTL_SECONDS, 60 * 60 * 24 * 30),
+    refreshCookieName: process.env.JWT_REFRESH_COOKIE_NAME || 'refreshToken',
+    cookieSecure: getBoolean(process.env.JWT_COOKIE_SECURE, false),
+    cookieDomain: process.env.JWT_COOKIE_DOMAIN || undefined,
+    defaultAvatarBaseUrl: process.env.DEFAULT_AVATAR_BASE_URL || 'https://cdn.example.com/avatars'
   }
 }

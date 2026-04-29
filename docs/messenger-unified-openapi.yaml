@@ -1,0 +1,785 @@
+openapi: 3.0.3
+info:
+  title: Unified Messenger API
+  version: 1.0.0
+  description: Единый HTTP-контракт для auth, user profile, user search, direct chats,
+    messages, files и ws-ticket. WebSocket-протокол описан в companion document messenger-unified-spec.md.
+servers:
+- url: https://api.example.com
+tags:
+- name: Auth
+  description: Регистрация, логин, refresh, logout, текущий пользователь
+- name: Users
+  description: Поиск пользователей и аватарка
+- name: Chats
+  description: Direct chats, история и вложения
+- name: WebSocket
+  description: Выдача одноразового тикета для открытия WebSocket
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    refreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+  schemas:
+    PublicUser:
+      type: object
+      required:
+      - login
+      - firstName
+      - lastName
+      - avatarUrl
+      properties:
+        login:
+          type: string
+          example: ivan.petrov
+        firstName:
+          type: string
+          example: Иван
+        lastName:
+          type: string
+          example: Петров
+        avatarUrl:
+          type: string
+          format: uri
+          example: https://cdn.example.com/avatars/ivan.petrov/a1b2c3.webp
+      description: Публичный DTO пользователя. Лишних полей быть не должно.
+    AuthRegisterRequest:
+      type: object
+      required:
+      - login
+      - password
+      - firstName
+      - lastName
+      properties:
+        login:
+          type: string
+          minLength: 3
+          maxLength: 32
+          example: ivan.petrov
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          example: Sup3rStrong!
+        firstName:
+          type: string
+          maxLength: 60
+          example: Иван
+        lastName:
+          type: string
+          maxLength: 60
+          example: Петров
+    AuthLoginRequest:
+      type: object
+      required:
+      - login
+      - password
+      properties:
+        login:
+          type: string
+          example: ivan.petrov
+        password:
+          type: string
+          example: Sup3rStrong!
+    AuthTokensResponse:
+      type: object
+      required:
+      - accessToken
+      - expiresIn
+      - user
+      properties:
+        accessToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiJ9...
+        expiresIn:
+          type: integer
+          example: 900
+          description: Lifetime access token в секундах
+        user:
+          $ref: '#/components/schemas/PublicUser'
+    LogoutResponse:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
+          example: Выход выполнен успешно
+    PagedUsersResponse:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicUser'
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 20
+        totalElements:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 1
+    ChatSummary:
+      type: object
+      required:
+      - chatId
+      - participant
+      properties:
+        chatId:
+          type: string
+          format: uuid
+          example: b2059650-59b3-43b6-8a34-4a5a87bd4ba8
+        participant:
+          $ref: '#/components/schemas/PublicUser'
+        lastMessagePreview:
+          type: string
+          nullable: true
+          example: Привет, файл дошёл
+        lastMessageType:
+          type: string
+          nullable: true
+          enum:
+          - TEXT
+          - IMAGE
+          - FILE
+          example: TEXT
+        lastMessageAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-03-31T18:21:44Z'
+    PagedChatsResponse:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatSummary'
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 50
+        totalElements:
+          type: integer
+          example: 12
+        totalPages:
+          type: integer
+          example: 1
+    CreateDirectChatRequest:
+      type: object
+      required:
+      - peerLogin
+      properties:
+        peerLogin:
+          type: string
+          example: anna.ivanova
+    MessageAttachment:
+      type: object
+      required:
+      - fileName
+      - contentType
+      - sizeBytes
+      - url
+      properties:
+        fileName:
+          type: string
+          example: photo.jpg
+        contentType:
+          type: string
+          example: image/jpeg
+        sizeBytes:
+          type: integer
+          format: int64
+          example: 934223
+        url:
+          type: string
+          format: uri
+          example: https://cdn.example.com/message-files/b2059650/.../photo.jpg
+    Message:
+      type: object
+      required:
+      - messageId
+      - chatId
+      - sender
+      - type
+      - attachments
+      - createdAt
+      properties:
+        messageId:
+          type: string
+          format: uuid
+          example: 938d5966-c628-4b72-9cf0-36ea3d0f4a4a
+        chatId:
+          type: string
+          format: uuid
+          example: b2059650-59b3-43b6-8a34-4a5a87bd4ba8
+        sender:
+          $ref: '#/components/schemas/PublicUser'
+        type:
+          type: string
+          enum:
+          - TEXT
+          - IMAGE
+          - FILE
+          example: IMAGE
+        text:
+          type: string
+          nullable: true
+          example: Вот файл
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageAttachment'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-03-31T18:40:21Z'
+        clientMessageId:
+          type: string
+          format: uuid
+          nullable: true
+          example: 75eaf7dd-6cc4-4cac-90ef-7d92c2281f6b
+    PagedMessagesResponse:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 50
+        totalElements:
+          type: integer
+          example: 143
+        totalPages:
+          type: integer
+          example: 3
+    AvatarUploadResponse:
+      type: object
+      required:
+      - user
+      properties:
+        user:
+          $ref: '#/components/schemas/PublicUser'
+    WsTicketResponse:
+      type: object
+      required:
+      - ticket
+      - expiresAt
+      - wsUrl
+      properties:
+        ticket:
+          type: string
+          format: uuid
+          example: 8d8e406f-6f95-48a4-92d2-27313772832f
+        expiresAt:
+          type: string
+          format: date-time
+          example: '2026-03-31T18:35:00Z'
+        wsUrl:
+          type: string
+          format: uri
+          example: wss://api.example.com/ws?ticket=8d8e406f-6f95-48a4-92d2-27313772832f
+    ErrorResponse:
+      type: object
+      required:
+      - timestamp
+      - status
+      - code
+      - message
+      - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-03-31T18:33:21Z'
+        status:
+          type: integer
+          example: 400
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Некорректный запрос
+        path:
+          type: string
+          example: /api/v1/chats/direct
+        traceId:
+          type: string
+          nullable: true
+          example: 1bf249f281e84848
+  responses:
+    BadRequest:
+      description: Некорректный запрос
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Неавторизованный запрос
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Доступ запрещён
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Конфликт данных
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PayloadTooLarge:
+      description: Превышен лимит размера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnsupportedMediaType:
+      description: Неподдерживаемый тип файла
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+      - Auth
+      summary: Регистрация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRegisterRequest'
+      responses:
+        '200':
+          description: Регистрация успешна. Refresh token выставляется в cookie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Логин пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthLoginRequest'
+      responses:
+        '200':
+          description: Логин успешен. Refresh token выставляется в cookie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - Auth
+      summary: Обновить access token по refresh cookie
+      security:
+      - refreshTokenCookie: []
+      responses:
+        '200':
+          description: Новый access token выпущен, refresh cookie обновлена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Выход пользователя
+      security:
+      - refreshTokenCookie: []
+      responses:
+        '200':
+          description: Сессия завершена, refresh cookie очищена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/auth/me:
+    get:
+      tags:
+      - Auth
+      summary: Текущий пользователь
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Текущий пользователь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/users/search:
+    get:
+      tags:
+      - Users
+      summary: Поиск пользователей
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: login
+        schema:
+          type: string
+        required: false
+        description: Фильтр по логину
+      - in: query
+        name: firstName
+        schema:
+          type: string
+        required: false
+        description: Фильтр по имени
+      - in: query
+        name: lastName
+        schema:
+          type: string
+        required: false
+        description: Фильтр по фамилии
+      - in: query
+        name: matchMode
+        schema:
+          type: string
+          enum:
+          - PARTIAL
+          - EXACT
+          default: PARTIAL
+        required: false
+      - in: query
+        name: excludeMe
+        schema:
+          type: boolean
+          default: true
+        required: false
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        required: false
+      - in: query
+        name: size
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        required: false
+      responses:
+        '200':
+          description: Страница результатов поиска
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedUsersResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/users/{login}:
+    get:
+      tags:
+      - Users
+      summary: Получить пользователя по логину
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: login
+        required: true
+        schema:
+          type: string
+        description: Уникальный логин пользователя
+      responses:
+        '200':
+          description: Пользователь найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/users/me/avatar:
+    put:
+      tags:
+      - Users
+      summary: Заменить аватарку текущего пользователя
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Файл изображения
+      responses:
+        '200':
+          description: Аватарка успешно заменена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarUploadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+  /api/v1/chats:
+    get:
+      tags:
+      - Chats
+      summary: Список чатов текущего пользователя
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        required: false
+      - in: query
+        name: size
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+        required: false
+      responses:
+        '200':
+          description: Страница чатов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedChatsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/chats/direct:
+    post:
+      tags:
+      - Chats
+      summary: Создать или получить direct chat
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDirectChatRequest'
+      responses:
+        '200':
+          description: Chat найден или создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/chats/{chatId}/messages:
+    get:
+      tags:
+      - Chats
+      summary: История сообщений чата
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - in: query
+        name: size
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      responses:
+        '200':
+          description: Страница сообщений в порядке createdAt DESC
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedMessagesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/chats/{chatId}/attachments:
+    post:
+      tags:
+      - Chats
+      summary: Загрузить файл или картинку в сообщение
+      description: Файл грузится в MinIO через backend. message.created по WebSocket
+        отправляется только после успешного upload и коммита БД.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Файл вложения
+                text:
+                  type: string
+                  description: Подпись к файлу
+                  nullable: true
+                clientMessageId:
+                  type: string
+                  format: uuid
+                  description: Клиентский ID для дедупликации
+                  nullable: true
+      responses:
+        '201':
+          description: Файл загружен, сообщение создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+  /api/v1/ws/tickets:
+    post:
+      tags:
+      - WebSocket
+      summary: Выдать одноразовый ticket для WebSocket
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Тикет выдан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WsTicketResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'

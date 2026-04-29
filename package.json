@@ -8,14 +8,17 @@
     "start:worker:js": "node src/workers/js/app.js",
     "start:worker:ts": "node src/workers/typescript/app.js",
     "start:worker:py": "python src/workers/python/app.py",
-    "check": "node --check src/manager/app.js && node --check src/workers/js/app.js && node --check src/workers/js/analyzer.js && node --check src/workers/typescript/app.js && node --check src/workers/typescript/analyzer.js && python -m py_compile src/workers/python/app.py src/workers/python/analyzer.py"
+    "check": "node --check src/manager/app.js && node --check src/manager/routes.js && node --check src/manager/auth-routes.js && node --check src/manager/auth-service.js && node --check src/shared/postgres.js && node --check src/workers/js/app.js && node --check src/workers/js/analyzer.js && node --check src/workers/typescript/app.js && node --check src/workers/typescript/analyzer.js && python -m py_compile src/workers/python/app.py src/workers/python/analyzer.py"
   },
   "dependencies": {
     "@babel/parser": "^7.29.2",
     "@babel/traverse": "^7.29.0",
     "axios": "^1.14.0",
+    "bcryptjs": "^3.0.3",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "minio": "^8.0.7",
-    "multer": "^2.1.1"
+    "multer": "^2.1.1",
+    "pg": "^8.20.0"
   }
 }
