@@ -8,6 +8,33 @@ function toIso(value) {
   return value instanceof Date ? value.toISOString() : String(value)
 }
 
+/**
+ * Выбирает доминирующий язык по списку job'ов (для случая multipart-загрузки).
+ * Фолбэк — язык primary job'а или 'unknown'.
+ */
+function resolveDominantLanguage(jobs, primaryJob) {
+  if (!Array.isArray(jobs) || jobs.length === 0) {
+    return primaryJob?.language || 'unknown'
+  }
+  const counts = new Map()
+  for (const j of jobs) {
+    if (!j?.language) continue
+    counts.set(j.language, (counts.get(j.language) || 0) + 1)
+  }
+  if (counts.size === 0) {
+    return primaryJob?.language || 'unknown'
+  }
+  let bestLang = null
+  let bestCount = -1
+  for (const [lang, count] of counts) {
+    if (count > bestCount) {
+      bestLang = lang
+      bestCount = count
+    }
+  }
+  return bestLang || primaryJob?.language || 'unknown'
+}
+
 function statusTone(score) {
   if (score < 40) return 'danger'
   if (score >= 75) return 'success'
@@ -113,17 +140,26 @@ class ResearchService {
     this.pool = pool
   }
 
-  async createSessionFromJob({ job, sourceName, fileCount, userId }) {
+  async createSessionFromJob({ job, jobs, analyses, graph, sourceName, fileCount, userId }) {
     const sessionId = createUuid()
-    let analysisPayload = null
-    let graphPayload = null
 
-    if (job?.resultObjectKey) {
+    // Если вызывающий уже посчитал агрегированный граф по всем файлам, используем его.
+    // Фолбэк (старое поведение): тянем только primary job из MinIO — нужен на случай,
+    // если кто-то ещё дёргает этот метод напрямую с одним job'ом.
+    let analysisPayload = Array.isArray(analyses) && analyses.length ? analyses : null
+    let graphPayload = graph || null
+
+    if (!graphPayload && job?.resultObjectKey) {
       const buffer = await readObjectAsBuffer(config.minio.resultBucket, job.resultObjectKey)
       const parsed = JSON.parse(buffer.toString('utf8'))
-      analysisPayload = parsed.analysis || null
-      graphPayload = analysisPayload ? aggregateAnalyses([analysisPayload]) : { nodes: [], edges: [], modules: [] }
+      const singleAnalysis = parsed.analysis || null
+      analysisPayload = singleAnalysis ? [singleAnalysis] : null
+      graphPayload = singleAnalysis
+        ? aggregateAnalyses([singleAnalysis])
+        : { nodes: [], edges: [], modules: [] }
     }
+
+    const dominantLanguage = resolveDominantLanguage(jobs, job)
 
     await this.pool.query(
       `
@@ -137,7 +173,7 @@ class ResearchService {
         sessionId,
         userId || null,
         sourceName,
-        job.language || 'unknown',
+        dominantLanguage,
         fileCount,
         job.jobId,
         job.resultObjectKey || null,
@@ -149,7 +185,7 @@ class ResearchService {
 
     return {
       sessionId,
-      language: job.language || 'unknown',
+      language: dominantLanguage,
       archiveName: sourceName,
       fileCount
     }

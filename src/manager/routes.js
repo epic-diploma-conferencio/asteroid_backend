@@ -6,6 +6,7 @@ const { aggregateAnalyses, loadCompletedAnalyses } = require('./graph-service')
 const { readObjectAsBuffer } = require('../shared/minio')
 const { createAuthRouter } = require('./auth-routes')
 const { getUserFromRequest } = require('./auth-utils')
+const { ARTICLES, getArticleById } = require('../shared/articles-catalog')
 
 function createRouter({ jobService, jobStore, authService, researchService }) {
   const router = express.Router()
@@ -113,6 +114,9 @@ function createRouter({ jobService, jobStore, authService, researchService }) {
       const primaryJob = completedJobs[0]
       const session = await researchService.createSessionFromJob({
         job: primaryJob,
+        jobs: completedJobs,
+        analyses,
+        graph: stitchedAnalysis.graph,
         sourceName: inputFiles.length === 1 ? inputFiles[0].originalname : `${inputFiles.length} files`,
         fileCount: completedJobs.length,
         userId: user?.id || null
@@ -236,6 +240,20 @@ function createRouter({ jobService, jobStore, authService, researchService }) {
 
   router.get('/graph-view', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'graph.html'))
+  })
+
+  router.get('/articles', (req, res) => {
+    res.json(
+      ARTICLES.map(({ content: _content, ...summary }) => summary)
+    )
+  })
+
+  router.get('/articles/:articleId', (req, res) => {
+    const article = getArticleById(req.params.articleId)
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' })
+    }
+    return res.json(article)
   })
 
   return router
