@@ -1,14 +1,14 @@
 openapi: 3.0.3
 info:
   title: Architecture Analysis Platform API
-  version: 1.1.0
+  version: 1.2.0
   description: |
     API for frontend integration with the manager service.
     Includes file analysis flow and user registration.
 
     Recommended frontend flow:
     1. Register user via POST /v1/auth/register (optional for now, if auth is enabled in UI).
-    2. Upload source file via POST /upload.
+    2. Upload one or multiple source files via POST /upload.
     3. Poll GET /jobs/{jobId} until status becomes COMPLETED or FAILED.
     4. Fetch final aggregated graph via GET /graph.
 servers:
@@ -107,33 +107,50 @@ paths:
   /upload:
     post:
       tags: [Upload]
-      summary: Upload a source file for analysis
-      description: Multipart upload with a required `file` field.
+      summary: Upload one or multiple source files for analysis
+      description: |
+        Multipart upload that supports:
+        - single file field `file`
+        - multiple file fields `files`
+        - both together
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
-              required: [file]
               properties:
                 file:
                   type: string
                   format: binary
-                  description: Source code file (.js, .ts, .py, ...)
+                  description: Single source code file (.js, .ts, .py, ...)
+                files:
+                  type: array
+                  description: Multiple source code files
+                  items:
+                    type: string
+                    format: binary
+                language:
+                  type: string
+                  nullable: true
+                  description: Optional client hint, currently ignored by backend
       responses:
-        '202':
-          description: File accepted and processed
+        '200':
+          description: At least one file processed, session created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobRecord'
+                $ref: '#/components/schemas/UploadResponse'
         '400':
           description: Invalid multipart payload
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingPayload:
+                  value:
+                    error: File payload is required in field "file" or "files".
         '500':
           description: Internal manager error
           content:
@@ -141,11 +158,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '502':
-          description: Worker request failed
+          description: All uploaded files failed processing
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobRecord'
+                $ref: '#/components/schemas/UploadAllFailedResponse'
 
   /jobs:
     get:
@@ -411,6 +428,117 @@ components:
         code:
           type: string
           nullable: true
+        status:
+          type: string
+          nullable: true
+
+    UploadFileError:
+      type: object
+      required: [jobId, originalName, status]
+      properties:
+        jobId:
+          type: string
+        originalName:
+          type: string
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        code:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+
+    StitchedFileInfo:
+      type: object
+      required: [jobId, originalName, language, sourceObjectKey]
+      properties:
+        jobId:
+          type: string
+        originalName:
+          type: string
+        language:
+          type: string
+          nullable: true
+        sourceObjectKey:
+          type: string
+        resultObjectKey:
+          type: string
+          nullable: true
+
+    StitchedAnalysis:
+      type: object
+      required: [formatVersion, generatedAt, files, analyses, graph]
+      properties:
+        formatVersion:
+          type: string
+          example: '1.0'
+        generatedAt:
+          type: string
+          format: date-time
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/StitchedFileInfo'
+        analyses:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        graph:
+          $ref: '#/components/schemas/GraphResponse'
+
+    UploadResponse:
+      type: object
+      required:
+        - message
+        - archiveId
+        - archiveName
+        - fileCount
+        - language
+        - completedFiles
+        - failedFiles
+        - stitchedAnalysis
+      properties:
+        message:
+          type: string
+          example: Upload completed and session created.
+        archiveId:
+          type: string
+          format: uuid
+        archiveName:
+          type: string
+        fileCount:
+          type: integer
+          minimum: 1
+        language:
+          type: string
+          nullable: true
+        completedFiles:
+          type: integer
+          minimum: 1
+        failedFiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UploadFileError'
+        stitchedAnalysis:
+          $ref: '#/components/schemas/StitchedAnalysis'
+
+    UploadAllFailedResponse:
+      type: object
+      required: [error, status, failedFiles]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        failedFiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UploadFileError'
 
     GraphModule:
       type: object
